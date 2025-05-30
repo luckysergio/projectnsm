@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "267587029292",
+    "project_id": "niaga-solusi-mandiri-c1186",
+    "storage_bucket": "niaga-solusi-mandiri-c1186.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:267587029292:android:be9775e29f0cd9ba0a0489",
+        "android_client_info": {
+          "package_name": "com.example.sales_nsm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbHhbL9NMZYxUfq2NTuljeqa_V2cgmYQo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
