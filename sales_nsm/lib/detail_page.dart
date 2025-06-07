@@ -113,7 +113,7 @@ class DetailPage extends StatelessWidget {
       _buildDetailRow("Nama Pemesan", data["nama_pemesan"]),
       _buildDetailRow("Jenis Alat", data["inventori_name"] ?? "-"),
       _buildDetailRow("Order Sewa", "${data["total_sewa"]} Jam"),
-      _buildDetailRow("Pengiriman", formatDate(data["tgl_pengiriman"])),
+      _buildDetailRow("Pengiriman", formatDate(data["tgl_pemakaian"])),
       _buildDetailRow("Pengembalian", formatDate(data["tgl_pengembalian"])),
       _buildDetailRow("Operator", data["Operator_name"] ?? "-"),
       _buildDetailRow(

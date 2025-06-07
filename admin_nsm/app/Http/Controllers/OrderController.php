@@ -63,11 +63,11 @@ class OrderController extends Controller
         }
 
         if ($request->has('bulan') && !empty($request->bulan)) {
-            $query->whereMonth('tgl_pengiriman', $request->bulan);
+            $query->whereMonth('tgl_pemakaian', $request->bulan);
         }
 
         if ($request->has('tahun') && !empty($request->tahun)) {
-            $query->whereYear('tgl_pengiriman', $request->tahun);
+            $query->whereYear('tgl_pemakaian', $request->tahun);
         }
 
         $order = $query->orderBy('created_at', 'desc')->get();
@@ -83,11 +83,11 @@ class OrderController extends Controller
         $query = Order::where('status_order', 'selesai');
 
         if ($request->has('bulan') && !empty($request->bulan)) {
-            $query->whereMonth('tgl_pengiriman', $request->bulan);
+            $query->whereMonth('tgl_pemakaian', $request->bulan);
         }
 
         if ($request->has('tahun') && !empty($request->tahun)) {
-            $query->whereYear('tgl_pengiriman', $request->tahun);
+            $query->whereYear('tgl_pemakaian', $request->tahun);
         }
 
         $orders = $query->orderBy('created_at', 'desc')->get();
@@ -121,10 +121,8 @@ class OrderController extends Controller
         try {
             $validated = $request->validate([
                 'status_order' => 'nullable|string|in:belum diproses,diproses,dikirim,selesai',
-                'tgl_pengiriman' => 'nullable|date',
-                'tgl_pengembalian' => 'nullable|date|after_or_equal:tgl_pengiriman',
+                'tgl_pemakaian' => 'nullable|date',
                 'catatan' => 'nullable|string',
-                'jam_berangkat' => 'nullable|date_format:H:i',
                 'jam_mulai' => 'nullable|date_format:H:i',
                 'jam_selesai' => 'nullable|date_format:H:i',
             ]);
@@ -134,11 +132,9 @@ class OrderController extends Controller
 
 
             $order->update([
-                'tgl_pengiriman' => $request->filled('tgl_pengiriman') ? $request->tgl_pengiriman : $order->tgl_pengiriman,
-                'tgl_pengembalian' => $request->filled('tgl_pengembalian') ? $request->tgl_pengembalian : $order->tgl_pengembalian,
+                'tgl_pemakaian' => $request->filled('tgl_pemakaian') ? $request->tgl_pemakaian : $order->tgl_pemakaian,
                 'status_order' => $request->filled('status_order') ? $request->status_order : $order->status_order,
                 'catatan' => $request->filled('catatan') ? $request->catatan : $order->catatan,
-                'jam_berangkat' => $request->filled('jam_berangkat') ? $request->jam_berangkat : $order->jam_berangkat,
                 'jam_mulai' => $request->filled('jam_mulai') ? $request->jam_mulai : $order->jam_mulai,
                 'jam_selesai' => $request->filled('jam_selesai') ? $request->jam_selesai : $order->jam_selesai,
             ]);
@@ -167,12 +163,11 @@ class OrderController extends Controller
             $validated = $request->validate([
                 'status_order' => 'nullable|string|in:belum diproses,diproses,dikirim,selesai',
                 'status_pembayaran' => 'nullable|string|in:belum dibayar,dp,lunas',
-                'tgl_pengiriman' => 'nullable|date',
+                'tgl_pemakaian' => 'nullable|date',
                 'jam_mulai' => 'nullable|date_format:H:i',
                 'jam_selesai' => 'nullable|date_format:H:i',
                 'overtime' => 'nullable|int',
                 'denda' => 'nullable|decimal:0,2',
-                'tgl_pengembalian' => 'nullable|date',
                 'catatan' => 'nullable|string',
             ]);
 
@@ -185,10 +180,9 @@ class OrderController extends Controller
 
             $order->status_order = $request->status_order;
             $order->status_pembayaran = $request->status_pembayaran;
-            $order->tgl_pengiriman = $request->tgl_pengiriman;
+            $order->tgl_pemakaian = $request->tgl_pemakaian;
             $order->jam_mulai = $request->jam_mulai;
             $order->jam_selesai = $request->jam_selesai;
-            $order->tgl_pengembalian = $request->tgl_pengembalian;
             $order->catatan = $request->catatan;
             $order->overtime = $request->overtime;
             $order->denda = $request->denda;
@@ -230,6 +224,8 @@ class OrderController extends Controller
             'nama_pemesan' => 'required|string',
             'alamat_pemesan' => 'required|string',
             'inventori_id' => 'required|exists:inventori,id',
+            'tgl_pemakaian' => 'required|date',
+            'jam_mulai' => 'required|date_format:H:i',
             'total_sewa' => 'required|integer|min:8',
             'harga_sewa' => 'required|decimal:0,2|min:0',
             'status_pembayaran' => 'required|in:belum dibayar,dp,lunas',
@@ -247,6 +243,8 @@ class OrderController extends Controller
             'alamat_pemesan' => $validated['alamat_pemesan'],
             'inventori_id' => $validated['inventori_id'],
             'total_sewa' => $validated['total_sewa'],
+            'tgl_pemakaian' => $validated['tgl_pemakaian'],
+            'jam_mulai' => $validated['jam_mulai'],
             'harga_sewa' => $validated['harga_sewa'],
             'total_harga' => $total_harga,
             'status_pembayaran' => $validated['status_pembayaran'],
@@ -369,7 +367,7 @@ class OrderController extends Controller
     public function getOrdersJadwalPengiriman()
     {
         $orders = Order::whereIn('status_order', ['diproses', 'persiapan', 'dikirim'])
-            ->orderBy('tgl_pengiriman', 'asc')
+            ->orderBy('tgl_pemakaian', 'asc')
             ->get();
 
         return response()->json(['orders' => $orders]);
@@ -455,7 +453,7 @@ class OrderController extends Controller
     public function getOrdersHistori()
     {
         $orders = Order::where('status_order', 'selesai')
-            ->orderBy('tgl_pengiriman', 'desc')
+            ->orderBy('tgl_pemakaian', 'desc')
             ->get();
 
         return response()->json(['orders' => $orders]);

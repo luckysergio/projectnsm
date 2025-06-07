@@ -198,11 +198,7 @@ class _SearchPageState extends State<SearchPage> {
                 style: TextStyle(color: Colors.grey[700]),
               ),
               Text(
-                "Mulai : ${formatDate(order['tgl_pengiriman'] ?? order['tanggal_mulai'])}",
-                style: TextStyle(color: Colors.grey[700]),
-              ),
-              Text(
-                "Selesai : ${formatDate(order['tgl_pengembalian'] ?? order['tanggal_selesai'])}",
+                "Mulai : ${formatDate(order['tgl_pemakaian'] ?? order['tanggal_mulai'])}",
                 style: TextStyle(color: Colors.grey[700]),
               ),
               Text(

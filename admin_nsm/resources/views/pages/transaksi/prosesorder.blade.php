@@ -114,33 +114,21 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="tgl_pengiriman" class="form-label">Tanggal Pengiriman</label>
-                                    <input type="date" class="form-control" id="tgl_pengiriman" name="tgl_pengiriman"
-                                        value="{{ old('tgl_pengiriman', $order->tgl_pengiriman ?? '') }}" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="jam_berangkat" class="form-label">Jam Berangkat</label>
-                                    <input type="time" class="form-control" id="jam_berangkat" name="jam_berangkat"
-                                        value="{{ old('jam_berangkat', $order->jam_berangkat ?? '') }}" required>
+                                    <label for="tgl_pemakaian" class="form-label">Tanggal Pengiriman</label>
+                                    <input type="date" class="form-control" id="tgl_pemakaian" name="tgl_pemakaian"
+                                        value="{{ old('tgl_pemakaian', $order->tgl_pemakaian ?? '') }}" required>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="jam_mulai" class="form-label">Jam Mulai</label>
                                     <input type="time" class="form-control" id="jam_mulai" name="jam_mulai"
-                                        value="{{ old('jam_mulai', $order->jam_mulai ?? '') }}" required>
+                                        value="{{ old('jam_mulai', date('H:i', strtotime($order->jam_mulai))) }}">
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="jam_selesai" class="form-label">Jam Selesai</label>
                                     <input type="time" class="form-control" id="jam_selesai" name="jam_selesai"
                                         value="{{ old('jam_selesai', $order->jam_selesai ?? '') }}" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="tgl_pengembalian" class="form-label">Tanggal Pengembalian</label>
-                                    <input type="date" class="form-control" id="tgl_pengembalian" name="tgl_pengembalian"
-                                        value="{{ old('tgl_pengembalian', $order->tgl_pengembalian) }}">
                                 </div>
 
                                 <div class="mb-3">

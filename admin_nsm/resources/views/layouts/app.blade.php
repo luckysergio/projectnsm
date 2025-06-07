@@ -23,6 +23,8 @@
 
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.15/dist/sweetalert2.min.css" rel="stylesheet">
 
+    @vite('resources/css/app.css')
+
 </head>
 
 <body id="page-top">

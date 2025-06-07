@@ -134,9 +134,9 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="tgl_pengiriman" class="form-label">Tanggal Pengiriman</label>
-                                    <input type="date" class="form-control" id="tgl_pengiriman" name="tgl_pengiriman"
-                                        value="{{ old('tgl_pengiriman', $order->tgl_pengiriman) }}">
+                                    <label for="tgl_pemakaian" class="form-label">Tanggal Pemakaian</label>
+                                    <input type="date" class="form-control" id="tgl_pemakaian" name="tgl_pemakaian"
+                                        value="{{ old('tgl_pemakaian', $order->tgl_pemakaian) }}">
                                 </div>
 
                                 <div class="mb-3">
@@ -149,12 +149,6 @@
                                     <label for="jam_selesai" class="form-label">Jam Selesai</label>
                                     <input type="time" class="form-control" id="jam_selesai" name="jam_selesai"
                                         value="{{ old('jam_selesai', date('H:i', strtotime($order->jam_selesai))) }}">
-                                </div>                                
-
-                                <div class="mb-3">
-                                    <label for="tgl_pengembalian" class="form-label">Tanggal Pengembalian</label>
-                                    <input type="date" class="form-control" id="tgl_pengembalian" name="tgl_pengembalian"
-                                        value="{{ old('tgl_pengembalian', $order->tgl_pengembalian) }}">
                                 </div>
 
                                 <div class="mb-3">

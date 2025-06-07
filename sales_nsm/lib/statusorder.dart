@@ -119,7 +119,7 @@ class StatusOrderPageState extends State<StatusOrderPage> {
                       children: [
                         Text("Pemesan: ${order['nama_pemesan']}"),
                         Text(
-                          "Pengiriman: ${formatDate(order['tgl_pengiriman'])}",
+                          "Pengiriman: ${formatDate(order['tgl_pemakaian'])}",
                         ),
                         Text(
                           "Status: ${order['status_order']}",
@@ -222,11 +222,7 @@ class DetailOrderPage extends StatelessWidget {
                 ),
                 _buildDetailRow(
                   "Pengiriman",
-                  formatDate(order["tgl_pengiriman"] ?? "-"),
-                ),
-                _buildDetailRow(
-                  "Jam Berangkat",
-                  formatJam(order["jam_berangkat"]),
+                  formatDate(order["tgl_pemakaian"] ?? "-"),
                 ),
                 _buildDetailRow("Jam Mulai", formatJam(order["jam_mulai"])),
                 _buildDetailRow("Jam Selesai", formatJam(order["jam_selesai"])),

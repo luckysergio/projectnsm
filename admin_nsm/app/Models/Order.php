@@ -11,7 +11,7 @@ class Order extends Model {
     protected $fillable = [
         'sales_id', 'nama_pemesan', 'alamat_pemesan', 'inventori_id',
         'total_sewa','overtime','harga_sewa','denda','total_harga', 'status_pembayaran', 'status_order',
-        'tgl_pengiriman','jam_berangkat','jam_mulai','jam_selesai', 'tgl_pengembalian', 'operator_name', 'catatan'
+        'tgl_pemakaian','jam_berangkat','jam_mulai','jam_selesai', 'tgl_pengembalian', 'operator_name', 'catatan'
     ];
 
     // **Menyembunyikan ID yang tidak diperlukan di JSON response**

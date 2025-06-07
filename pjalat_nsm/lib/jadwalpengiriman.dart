@@ -254,11 +254,6 @@ class _JadwalPengirimanPageState extends State<JadwalPengirimanPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Jam Berangkat: ${formatJam(order['jam_berangkat'])}",
-              style: TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-            const SizedBox(height: 8),
-            Text(
               "Jam Mulai: ${formatJam(order['jam_mulai'])}",
               style: TextStyle(fontSize: 14, color: Colors.black54),
             ),
@@ -269,12 +264,7 @@ class _JadwalPengirimanPageState extends State<JadwalPengirimanPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Tanggal Pengiriman: ${formatDate(order['tgl_pengiriman'])}",
-              style: TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Tanggal Pengembalian: ${formatDate(order['tgl_pengembalian'])}",
+              "Tanggal Pengiriman: ${formatDate(order['tgl_pemakaian'])}",
               style: TextStyle(fontSize: 14, color: Colors.black54),
             ),
             const SizedBox(height: 8),

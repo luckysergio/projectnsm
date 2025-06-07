@@ -345,24 +345,12 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Tanggal Pengiriman & Tanggal Pengembalian -->
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
+                                            <div class="row mb-3">
+                                                <div class="col-12">
                                                     <div class="card shadow-sm">
-                                                        <div class="card-body">
-                                                            <h6><i class="fas fa-calendar-day"></i> Tanggal Pengiriman:</h6>
-                                                            <p>{{ \Carbon\Carbon::parse($item->tgl_pengiriman)->format('d/m/Y') }}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <div class="card shadow-sm">
-                                                        <div class="card-body">
-                                                            <h6><i class="fas fa-calendar-check"></i> Tanggal Pengembalian:
-                                                            </h6>
-                                                            <p>{{ \Carbon\Carbon::parse($item->tgl_pengembalian)->format('d/m/Y') }}
+                                                        <div class="card-body text-center">
+                                                            <h6><i class="fas fa-calendar-day"></i> Tanggal Pemakaian:</h6>
+                                                            <p>{{ \Carbon\Carbon::parse($item->tgl_pemakaian)->format('d/m/Y') }}
                                                             </p>
                                                         </div>
                                                     </div>

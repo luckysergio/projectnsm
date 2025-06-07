@@ -31,7 +31,7 @@
                 <td>{{ $order->nama_pemesan }}</td>
                 <td>{{ $order->inventori_name }}</td>
                 <td>Rp {{ number_format($order->total_harga, 0, ',', '.') }}</td>
-                <td>{{ \Carbon\Carbon::parse($order->tgl_pengiriman)->format('d/m/Y') }}</td>
+                <td>{{ \Carbon\Carbon::parse($order->tgl_pemakaian)->format('d/m/Y') }}</td>
             </tr>
             @endforeach
         </tbody>

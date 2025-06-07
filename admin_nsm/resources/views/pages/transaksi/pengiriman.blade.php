@@ -154,10 +154,9 @@
                         <p><strong>Alamat:</strong> {{ $item->alamat_pemesan }}</p>
                         <p><strong>Alat:</strong> {{ $item->inventori_name }}</p>
                         <p><strong>Sewa:</strong> {{ $item->total_sewa }} jam</p>
-                        <p><strong>Pengiriman:</strong> {{ \Carbon\Carbon::parse($item->tgl_pengiriman)->format('d-m-y') }}</p>
+                        <p><strong>Pengiriman:</strong> {{ \Carbon\Carbon::parse($item->tgl_pemakaian)->format('d-m-y') }}</p>
                         <p><strong>Jam Mulai:</strong> {{ \Carbon\Carbon::parse($item->jam_mulai)->format('H:i') }} WIB</p>
                         <p><strong>Jam Selesai:</strong> {{ \Carbon\Carbon::parse($item->jam_selesai)->format('H:i') }} WIB</p>
-                        <p><strong>Pengembalian:</strong> {{ \Carbon\Carbon::parse($item->tgl_pengembalian)->format('d-m-y') }}</p>
                         <p><strong>Operator:</strong> {{ $item->operator_name }}</p>
                         <p><strong>Status:</strong> {{ $item->status_order }}</p>
                         <p><strong>Catatan:</strong> {{ $item->catatan }}</p>

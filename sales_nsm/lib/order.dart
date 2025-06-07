@@ -20,10 +20,36 @@ class _OrderPageState extends State<OrderPage> {
   String _namaPemesan = "";
   String _alamatPemesan = "";
   int? _selectedAlatId;
+  String? _tglPemakaian;
+  String? _jamMulai;
   int _totalSewa = 8;
   String _selectedPembayaran = "belum dibayar";
   String catatan = "";
   double _totalHarga = 0.0;
+
+  String formatDate(String? date) {
+    if (date == null || date.isEmpty) return "-";
+    try {
+      DateTime parsedDate = DateTime.parse(date);
+      return DateFormat(
+        'dd-MM-yyyy',
+      ).format(parsedDate); // format tanggal ke dd/MM/yyyy
+    } catch (e) {
+      return "-"; // jika format tanggal tidak valid
+    }
+  }
+
+  String formatJam(String? time) {
+    if (time == null || time.isEmpty) return "-";
+    try {
+      DateTime parsedTime = DateTime.parse(
+        "1970-01-01T$time",
+      ); // Parsing waktu (anggap tanggalnya tidak penting)
+      return "${DateFormat('HH.mm').format(parsedTime)} WIB"; // Format jam dan menit, lalu tambahkan 'WIB'
+    } catch (e) {
+      return "-"; // Jika format waktu tidak valid
+    }
+  }
 
   List<Map<String, dynamic>> _alatTersedia = [];
   final List<String> metodePembayaran = ["Belum bayar", "DP", "Lunas"];
@@ -114,6 +140,8 @@ class _OrderPageState extends State<OrderPage> {
           "nama_pemesan": _namaPemesan,
           "alamat_pemesan": _alamatPemesan,
           "inventori_id": _selectedAlatId,
+          "tgl_pemakaian": _tglPemakaian,
+          "jam_mulai": _jamMulai,
           "total_sewa": _totalSewa,
           "harga_sewa": _totalHarga,
           "status_pembayaran": _selectedPembayaran,
@@ -273,6 +301,19 @@ class _OrderPageState extends State<OrderPage> {
                         });
                         _updateTotalHarga();
                       }),
+                      _buildDateField("Tanggal Pemakaian", _tglPemakaian, (
+                        pickedDate,
+                      ) {
+                        setState(() {
+                          _tglPemakaian = pickedDate.toIso8601String();
+                        });
+                      }),
+                      _buildTimeField("Jam Mulai", _jamMulai, (pickedTime) {
+                        setState(() {
+                          _jamMulai =
+                              "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
+                        });
+                      }),
                       _buildDropdownPembayaran(),
                       _buildTextField("Catatan", (value) => catatan = value),
                       Padding(
@@ -429,6 +470,82 @@ class _OrderPageState extends State<OrderPage> {
                 .toList(),
         onChanged: (value) => setState(() => _selectedPembayaran = value!),
       ),
+    );
+  }
+
+  Widget _buildDateField(
+    String label,
+    String? value,
+    Function(DateTime) onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          readOnly: true,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Colors.blue),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+            ),
+            suffixIcon: Icon(Icons.calendar_today),
+          ),
+          controller: TextEditingController(
+            text: value == null ? '' : formatDate(value),
+          ),
+          onTap: () async {
+            DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime.now(),
+              lastDate: DateTime(2100),
+            );
+            if (picked != null) {
+              onChanged(picked);
+            }
+          },
+        ),
+        SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildTimeField(
+    String label,
+    String? value,
+    Function(TimeOfDay) onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          readOnly: true,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Colors.blue),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+            ),
+            suffixIcon: Icon(Icons.access_time),
+          ),
+          controller: TextEditingController(
+            text: value == null ? '' : formatJam(value),
+          ),
+          onTap: () async {
+            TimeOfDay? picked = await showTimePicker(
+              context: context,
+              initialTime: TimeOfDay.now(),
+            );
+            if (picked != null) {
+              onChanged(picked);
+            }
+          },
+        ),
+        SizedBox(height: 16),
+      ],
     );
   }
 

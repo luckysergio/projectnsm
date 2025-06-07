@@ -19,11 +19,9 @@ return new class extends Migration {
             $table->decimal('total_harga', 12, 2)->nullable();
             $table->enum('status_pembayaran', ['belum dibayar', 'dp', 'lunas'])->default('belum dibayar');
             $table->enum('status_order', ['belum diproses', 'diproses','persiapan', 'dikirim', 'selesai'])->nullable();
-            $table->date('tgl_pengiriman')->nullable();
-            $table->time('jam_berangkat')->nullable();
+            $table->date('tgl_pemakaian')->nullable();
             $table->time('jam_mulai')->nullable();
             $table->time('jam_selesai')->nullable();
-            $table->date('tgl_pengembalian')->nullable();
             $table->string('operator_name')->nullable();
             $table->text('catatan')->nullable();
             $table->timestamps();

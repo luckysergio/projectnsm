@@ -119,7 +119,7 @@ class HistoriOrderPageState extends State<HistoriOrderPage> {
                         ),
                         // Menambahkan format tanggal pada bagian ini
                         Text(
-                          "Pengiriman: ${formatDate(order['tgl_pengiriman'])}",
+                          "Pengiriman: ${formatDate(order['tgl_pemakaian'])}",
                         ),
                       ],
                     ),
@@ -222,7 +222,7 @@ class DetailOrderPage extends StatelessWidget {
                 _buildDetailRow("Jenis Alat", order["inventori_name"] ?? "-"),
                 _buildDetailRow(
                   "Pengiriman",
-                  formatDate(order["tgl_pengiriman"]),
+                  formatDate(order["tgl_pemakaian"]),
                 ),
                 _buildDetailRow(
                   "Pengembalian",
