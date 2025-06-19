@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:sales_nsm/pembayaran_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StatusOrderPage extends StatefulWidget {
@@ -30,7 +31,7 @@ class StatusOrderPageState extends State<StatusOrderPage> {
     }
 
     final response = await http.get(
-      Uri.parse("http://192.168.1.104:8000/api/orders/pending"),
+      Uri.parse("http://192.168.1.104:8000/api/orders/active"),
       headers: {"Authorization": "Bearer $_token"},
     );
 
@@ -39,30 +40,6 @@ class StatusOrderPageState extends State<StatusOrderPage> {
       return List<Map<String, dynamic>>.from(data["orders"]);
     } else {
       throw Exception("Gagal mengambil data order.");
-    }
-  }
-
-  String formatDate(String? date) {
-    if (date == null || date.isEmpty) return "-";
-    try {
-      DateTime parsedDate = DateTime.parse(date);
-      return DateFormat(
-        'dd-MM-yyyy',
-      ).format(parsedDate); // format tanggal ke dd/MM/yyyy
-    } catch (e) {
-      return "-"; // jika format tanggal tidak valid
-    }
-  }
-
-  String formatJam(String? time) {
-    if (time == null || time.isEmpty) return "-";
-    try {
-      DateTime parsedTime = DateTime.parse(
-        "1970-01-01T$time",
-      ); // Parsing waktu (anggap tanggalnya tidak penting)
-      return "${DateFormat('HH.mm').format(parsedTime)} WIB"; // Format jam dan menit, lalu tambahkan 'WIB'
-    } catch (e) {
-      return "-"; // Jika format waktu tidak valid
     }
   }
 
@@ -98,6 +75,8 @@ class StatusOrderPageState extends State<StatusOrderPage> {
               itemCount: orders.length,
               itemBuilder: (context, index) {
                 final order = orders[index];
+                final customerName =
+                    order["customer"]?["nama"]?.toString() ?? "Tidak diketahui";
                 return Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -111,43 +90,27 @@ class StatusOrderPageState extends State<StatusOrderPage> {
                       size: 40,
                     ),
                     title: Text(
-                      "Order ID: ${order['id']}",
+                      "SEWA-00${order['id']}",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Pemesan: ${order['nama_pemesan']}"),
-                        Text(
-                          "Pengiriman: ${formatDate(order['tgl_pemakaian'])}",
-                        ),
-                        Text(
-                          "Status: ${order['status_order']}",
-                          style: TextStyle(
-                            color:
-                                order['status_order'] == "Dikirim"
-                                    ? Colors.green
-                                    : Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
+                    subtitle: Text("Pemesan: $customerName"),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 18,
                       color: Colors.blue,
                     ),
                     onTap: () async {
-                      await Navigator.push(
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => DetailOrderPage(order: order),
                         ),
                       );
-
-                      setState(() {
-                        _ordersFuture = _fetchOrders();
-                      });
+                      if (result == true) {
+                        setState(() {
+                          _ordersFuture = _fetchOrders();
+                        });
+                      }
                     },
                   ),
                 );
@@ -160,127 +123,170 @@ class StatusOrderPageState extends State<StatusOrderPage> {
   }
 }
 
-class DetailOrderPage extends StatelessWidget {
+class DetailOrderPage extends StatefulWidget {
   final Map<String, dynamic> order;
   const DetailOrderPage({super.key, required this.order});
 
-  // Fungsi untuk format tanggal
+  @override
+  State<DetailOrderPage> createState() => _DetailOrderPageState();
+}
+
+class _DetailOrderPageState extends State<DetailOrderPage> {
   String formatDate(String? date) {
     if (date == null || date.isEmpty) return "-";
     try {
       DateTime parsedDate = DateTime.parse(date);
-      return DateFormat(
-        'dd-MM-yyyy',
-      ).format(parsedDate); // format tanggal ke dd/MM/yyyy
-    } catch (e) {
-      return "-"; // jika format tanggal tidak valid
+      return DateFormat('dd-MM-yyyy').format(parsedDate);
+    } catch (_) {
+      return "-";
     }
   }
 
-  // Fungsi untuk format jam
   String formatJam(String? time) {
     if (time == null || time.isEmpty) return "-";
     try {
-      DateTime parsedTime = DateTime.parse(
-        "1970-01-01T$time",
-      ); // Parsing waktu (anggap tanggalnya tidak penting)
-      return "${DateFormat('HH.mm').format(parsedTime)} WIB"; // Format jam dan menit, lalu tambahkan 'WIB'
-    } catch (e) {
-      return "-"; // Jika format waktu tidak valid
+      DateTime parsedTime = DateTime.parse("1970-01-01T$time");
+      return "${DateFormat('HH.mm').format(parsedTime)} WIB";
+    } catch (_) {
+      return "-";
+    }
+  }
+
+  String formatRupiah(dynamic number) {
+    final formatCurrency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    try {
+      return formatCurrency.format(int.parse(number.toString()));
+    } catch (_) {
+      return "Rp 0";
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final List detailOrders = widget.order["detail_orders"] ?? [];
+    final pembayaran = widget.order["pembayaran"];
+    final tagihan = pembayaran != null ? (pembayaran["tagihan"] ?? 0) : 0;
+    final detailPembayarans = pembayaran?["detail_pembayarans"] ?? [];
+
+    final totalDibayar = (detailPembayarans as List).fold<int>(
+      0,
+      (sum, item) => sum + (int.tryParse(item["jml_dibayar"].toString()) ?? 0),
+    );
+    final sisa = tagihan - totalDibayar;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Detail Order ${order['id']}"),
+        title: Text("SEWA-00${widget.order['id']}"),
         centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        scrolledUnderElevation: 0,
       ),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(16.0),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 4,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow("ID Order", order["id"].toString()),
-                _buildDetailRow("Nama Pemesan", order["nama_pemesan"]),
-                _buildDetailRow("Jenis Alat", order["inventori_name"] ?? "-"),
-                _buildDetailRow(
-                  "Status",
-                  order["status_order"],
-                  color:
-                      order["status_order"] == "Dikirim"
-                          ? Colors.green
-                          : Colors.orange,
-                ),
-                _buildDetailRow(
-                  "Pengiriman",
-                  formatDate(order["tgl_pemakaian"] ?? "-"),
-                ),
-                _buildDetailRow("Jam Mulai", formatJam(order["jam_mulai"])),
-                _buildDetailRow("Jam Selesai", formatJam(order["jam_selesai"])),
-
-                const SizedBox(height: 20),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Kembali",
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
+        children: [
+          Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildRow(
+                    "Pemesan",
+                    widget.order["customer"]?["nama"] ?? "-",
                   ),
-                ),
-              ],
+                  const Divider(),
+                  for (var d in detailOrders) ...[
+                    Center(
+                      child: Text(
+                        "Pompa ${d["alat"]?["nama"] ?? "-"}",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    _buildRow("Alamat", d["alamat"] ?? "-"),
+                    _buildRow("Tanggal", formatDate(d["tgl_mulai"])),
+                    _buildRow("Mulai", formatJam(d["jam_mulai"])),
+                    _buildRow("Selesai", formatJam(d["jam_selesai"])),
+                    _buildRow("Status", d["status"] ?? "-"),
+                    _buildRow(
+                      "Total jam sewa",
+                      d["total_sewa"]?.toString() ?? "-",
+                    ),
+                    _buildRow("Harga", formatRupiah(d["harga_sewa"])),
+                    const Divider(),
+                  ],
+                  _buildRow("Total Tagihan", formatRupiah(tagihan)),
+                  _buildRow("Total Dibayar", formatRupiah(totalDibayar)),
+                  _buildRow(
+                    "Sisa Pembayaran",
+                    formatRupiah(sisa),
+                    color: sisa > 0 ? Colors.red : Colors.green,
+                  ),
+                  const SizedBox(height: 20),
+                  if (sisa > 0)
+                    Center(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.payment),
+                        label: const Text("Lakukan Pembayaran"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) =>
+                                      PembayaranPage(order: widget.order),
+                            ),
+                          );
+
+                          if (result == true) {
+                            navigator.pop(true);
+                          }
+                        },
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    Color color = Colors.black,
-  }) {
+  Widget _buildRow(String title, String value, {Color? color}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 2,
             child: Text(
-              label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          const SizedBox(width: 8),
           Expanded(
             flex: 3,
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 16, color: color),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-            ),
+            child: Text(value, style: TextStyle(color: color ?? Colors.black)),
           ),
         ],
       ),

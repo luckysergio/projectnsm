@@ -1,19 +1,21 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:pjalat_nsm/home.dart';
+import 'package:pjalat_nsm/providers/order_service_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'home.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nikController = TextEditingController();
+  final TextEditingController _loginController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
@@ -28,9 +30,10 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _checkLoginStatus() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-
     if (!mounted) return;
     if (token != null) {
+      // Jalankan polling saat sudah login sebelumnya
+      ref.read(orderServiceProvider);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const BerandaPage()),
@@ -46,39 +49,51 @@ class _LoginPageState extends State<LoginPage> {
       _errorMessage = null;
     });
 
-    final Uri url = Uri.parse('http://192.168.1.104:8000/api/login');
+    final Uri url = Uri.parse('http://192.168.1.104:8000/api/auth/login');
 
     try {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "nik": _nikController.text.trim(),
+          "login": _loginController.text.trim(),
           "password": _passwordController.text.trim(),
         }),
       );
 
       final responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && responseData['success']) {
-        final userRole = responseData['user']['role'];
-        if (userRole != 'pj_alat') {
+      if (response.statusCode == 200) {
+        final user = responseData['user'];
+        final karyawan = user['karyawan'];
+
+        if (karyawan == null) {
           setState(() {
-            _errorMessage = 'Hanya penanggung jawab alat yang bisa login';
+            _errorMessage = 'Data karyawan tidak ditemukan.';
+          });
+          return;
+        }
+
+        final role = karyawan['role'];
+        final jabatan = role?['jabatan']?.toLowerCase() ?? '';
+
+        if (jabatan != 'penanggung jawab alat') {
+          setState(() {
+            _errorMessage =
+                'Hanya role penanggung jawab alat yang diizinkan login.';
           });
           return;
         }
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', responseData['token']);
-        await prefs.setStringList('user', [
-          responseData['user']['nik'].toString(),
-          responseData['user']['name'],
-          responseData['user']['id'].toString(),
-        ]);
+        await prefs.setInt('nik', int.parse(karyawan['nik'].toString()));
+        await prefs.setString('name', karyawan['nama']);
+
+        // ⏱️ Jalankan polling saat login berhasil
+        ref.read(orderServiceProvider);
 
         if (!mounted) return;
-
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const BerandaPage()),
@@ -86,7 +101,9 @@ class _LoginPageState extends State<LoginPage> {
         );
       } else {
         setState(() {
-          _errorMessage = responseData['message'] ?? 'Login gagal';
+          _errorMessage =
+              responseData['message'] ??
+              'Login gagal: Username atau password salah';
         });
       }
     } catch (e) {
@@ -127,15 +144,12 @@ class _LoginPageState extends State<LoginPage> {
                 Image.asset('assets/images/nsm.png', width: 150, height: 150),
                 const SizedBox(height: 20),
                 _buildTextField(
-                  controller: _nikController,
-                  label: 'Nomor Induk Karyawan',
+                  controller: _loginController,
+                  label: 'Email atau Nomor Induk Karyawan',
                   icon: Icons.badge_outlined,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Harap masukkan NIK';
-                    }
-                    if (value.length < 6) {
-                      return 'NIK minimal 6 digit';
+                      return 'Harap masukkan Email atau NIK';
                     }
                     return null;
                   },
@@ -150,8 +164,8 @@ class _LoginPageState extends State<LoginPage> {
                     if (value == null || value.isEmpty) {
                       return 'Harap masukkan password';
                     }
-                    if (value.length < 6) {
-                      return 'Password minimal 6 karakter';
+                    if (value.length < 8) {
+                      return 'Password minimal 8 karakter';
                     }
                     return null;
                   },

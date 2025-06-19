@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pjalat_nsm/providers/order_count_provider.dart';
+import 'package:pjalat_nsm/providers/order_service_provider.dart';
+import 'package:pjalat_nsm/providers/perawatan_count_provider.dart';
+import 'package:pjalat_nsm/providers/perawatan_service_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:async';
 import 'package:badges/badges.dart' as badges;
 import 'jadwalpengiriman.dart';
@@ -12,7 +14,6 @@ import 'historiperawatan.dart';
 import 'historiorder.dart';
 import 'inventory.dart';
 import 'profile.dart';
-import 'providers/data_provider.dart';
 import 'search_page.dart';
 
 class BerandaPage extends StatefulWidget {
@@ -82,7 +83,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    Future.microtask(() => _fetchDataCounts());
+    ref.read(orderServiceProvider);
+    ref.read(perawatanServiceProvider);
   }
 
   Future<void> _loadUserData() async {
@@ -97,57 +99,12 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Future<void> _fetchDataCounts() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
-
-    try {
-      final pengirimanUrl = Uri.parse(
-        "http://192.168.1.104:8000/api/count-orders",
-      );
-      final perawatanUrl = Uri.parse(
-        "http://192.168.1.104:8000/api/count-perawatan",
-      );
-
-      final pengirimanResponse = await http.get(
-        pengirimanUrl,
-        headers: {"Authorization": "Bearer $token"},
-      );
-
-      final perawatanResponse = await http.get(
-        perawatanUrl,
-        headers: {"Authorization": "Bearer $token"},
-      );
-
-      if (pengirimanResponse.statusCode == 200 &&
-          perawatanResponse.statusCode == 200) {
-        final pengirimanData = json.decode(pengirimanResponse.body);
-        final perawatanData = json.decode(perawatanResponse.body);
-
-        int jumlahPengiriman = pengirimanData['pengiriman'] ?? 0;
-        int jumlahPerawatan = perawatanData['perawatan'] ?? 0;
-
-        debugPrint("Jumlah Pengiriman: $jumlahPengiriman");
-        debugPrint("Jumlah Perawatan: $jumlahPerawatan");
-
-        ref.read(pengirimanCountProvider.notifier).state = jumlahPengiriman;
-        ref.read(perawatanCountProvider.notifier).state = jumlahPerawatan;
-      } else {
-        debugPrint(
-          "Gagal mengambil data: ${pengirimanResponse.statusCode}, ${perawatanResponse.statusCode}",
-        );
-      }
-    } catch (e) {
-      debugPrint("Error fetching data: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
-          await _fetchDataCounts();
+          await ref.read(orderServiceProvider).fetchOrderCount();
         },
         backgroundColor: Colors.grey[100],
         child: ListView(
@@ -438,7 +395,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       children: [
         Consumer(
           builder: (context, ref, child) {
-            final jumlahPengiriman = ref.watch(pengirimanCountProvider);
+            final jumlahOrderAktif = ref.watch(orderCountProvider);
             return _buildCategoryButton(
               "Jadwal Pengiriman Alat",
               Icons.local_shipping,
@@ -451,7 +408,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 );
               },
-              badgeCount: jumlahPengiriman,
+              badgeCount: jumlahOrderAktif,
             );
           },
         ),
@@ -487,7 +444,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
             );
 
             if (result == true) {
-              _fetchDataCounts();
+              await ref.read(perawatanServiceProvider).fetchPerawatanCount();
             }
           },
         ),

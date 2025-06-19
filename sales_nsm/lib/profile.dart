@@ -12,8 +12,12 @@ class ProfilePage extends StatefulWidget {
 }
 
 class ProfilePageState extends State<ProfilePage> {
-  Map<String, dynamic>? salesData;
+  String? nama;
+  String? nik;
+  String? email;
+  String? jabatan;
   int completedOrdersCount = 0;
+
   bool isLoading = true;
   bool hasError = false;
   String? token;
@@ -21,26 +25,28 @@ class ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadToken();
+    _loadTokenAndData();
   }
 
-  Future<void> _loadToken() async {
+  Future<void> _loadTokenAndData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     token = prefs.getString('token');
 
-    if (token != null) {
-      await fetchProfile();
-      await fetchCompletedOrdersCount();
-    } else {
+    if (token == null) {
       setState(() {
         isLoading = false;
         hasError = true;
       });
+      return;
     }
+
+    await Future.wait([fetchProfile(), fetchCompletedOrdersCount()]);
+
+    setState(() => isLoading = false);
   }
 
   Future<void> fetchProfile() async {
-    const String apiUrl = "http://192.168.1.104:8000/api/profile";
+    const String apiUrl = "http://192.168.1.104:8000/api/auth/me";
 
     try {
       final response = await http.get(
@@ -50,8 +56,16 @@ class ProfilePageState extends State<ProfilePage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
+        final user = data['user'] ?? {};
+        final karyawan = user['karyawan'] ?? {};
+        final role = karyawan['role'] ?? {};
+
         setState(() {
-          salesData = data["user"];
+          nama = karyawan['nama'] ?? "Tidak Ada Nama";
+          nik = karyawan['nik']?.toString() ?? "-";
+          email = user['email'] ?? "-";
+          jabatan = role['jabatan'] ?? "Tidak Ada Jabatan";
         });
       } else {
         setState(() => hasError = true);
@@ -72,7 +86,8 @@ class ProfilePageState extends State<ProfilePage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List orders = data["orders"];
+        final List orders = data["orders"] ?? [];
+
         setState(() {
           completedOrdersCount = orders.length;
         });
@@ -81,28 +96,26 @@ class ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       setState(() => hasError = true);
-    } finally {
-      setState(() => isLoading = false);
     }
   }
 
   Future<void> _logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
+    final storedToken = prefs.getString('token');
 
-    if (token == null) {
+    if (storedToken == null) {
       _navigateToLogin();
       return;
     }
 
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.1.104:8000/api/logout"),
-        headers: {"Authorization": "Bearer $token"},
+        Uri.parse("http://192.168.1.104:8000/api/auth/logout"),
+        headers: {"Authorization": "Bearer $storedToken"},
       );
 
       if (response.statusCode == 200) {
-        await prefs.remove('token');
+        await prefs.clear();
         _navigateToLogin();
       } else {
         _showErrorDialog("Gagal logout, coba lagi.");
@@ -156,124 +169,114 @@ class ProfilePageState extends State<ProfilePage> {
               ? const Center(child: Text("Gagal memuat data"))
               : Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blueAccent, Colors.lightBlue],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(50),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: const CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.blueAccent,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              salesData?["name"] ?? "Nama tidak tersedia",
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              salesData?["role"] ?? "Jabatan tidak diketahui",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildHeader(),
                   const SizedBox(height: 20),
-
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        _buildProfileInfo(
-                          "Nomor Induk Karyawan",
-                          salesData?["nik"].toString() ?? "-",
-                          Icons.badge,
-                        ),
-                        _buildProfileInfo(
-                          "Email",
-                          salesData?["email"] ?? "-",
-                          Icons.email,
-                        ),
-                        _buildProfileInfo(
-                          "Jumlah Order Selesai",
-                          completedOrdersCount.toString(),
-                          Icons.check_circle,
-                        ),
-                        const SizedBox(height: 30),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 20,
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _logout,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: Colors.blueAccent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 5,
-                        ),
-                        child: const Text(
-                          "Keluar",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _buildProfileDetails()),
+                  _buildLogoutButton(),
                 ],
               ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blueAccent, Colors.lightBlue],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(50),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, size: 50, color: Colors.blueAccent),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nama ?? "Nama tidak tersedia",
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                jabatan ?? "Jabatan tidak diketahui",
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileDetails() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        _buildProfileInfo("Nomor Induk Karyawan", nik ?? "-", Icons.badge),
+        _buildProfileInfo("Email", email ?? "-", Icons.email),
+        _buildProfileInfo(
+          "Jumlah Order Selesai",
+          completedOrdersCount.toString(),
+          Icons.check_circle,
+        ),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _logout,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            backgroundColor: Colors.blueAccent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 5,
+          ),
+          child: const Text(
+            "Keluar",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
     );
   }
 

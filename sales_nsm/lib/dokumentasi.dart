@@ -37,11 +37,12 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
       await _fetchPendingOrders();
     } else {
       setState(() => _isLoadingOrders = false);
+      _showDialog("Token tidak ditemukan. Silakan login ulang.", Colors.red);
     }
   }
 
   Future<void> _fetchPendingOrders() async {
-    const String apiUrl = "http://192.168.1.104:8000/api/orders/pending";
+    const String apiUrl = "http://192.168.1.104:8000/api/orders/active";
 
     try {
       final response = await http.get(
@@ -51,35 +52,41 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        setState(() {
-          _orderList = List<Map<String, dynamic>>.from(data["orders"]);
-          if (_orderList.isNotEmpty) {
-            _selectedOrder = _orderList.first["id"].toString();
-          }
-        });
+        if (data["orders"] != null) {
+          setState(() {
+            _orderList = List<Map<String, dynamic>>.from(data["orders"]);
+            if (_orderList.isNotEmpty) {
+              _selectedOrder = _orderList.first["id"].toString();
+            }
+          });
+        } else {
+          _showDialog("Data order kosong.", Colors.orange);
+        }
+      } else {
+        _showDialog("Gagal memuat order: ${response.statusCode}", Colors.red);
       }
     } catch (e) {
-      print("Error fetching orders: $e");
+      _showDialog("Terjadi kesalahan saat mengambil data: $e", Colors.red);
     } finally {
       setState(() => _isLoadingOrders = false);
     }
   }
 
   Future<void> _pickMultipleImages() async {
-    if (_imageFiles.length >= 5) {
-      _showDialog("Maksimal hanya bisa mengunggah 5 foto!", Colors.red);
+    if (_imageFiles.length >= 10) {
+      _showDialog("Maksimal hanya bisa mengunggah 10 foto!", Colors.red);
       return;
     }
 
     final List<XFile> pickedFiles = await _picker.pickMultiImage();
     if (pickedFiles.isNotEmpty) {
       setState(() {
-        int remainingSlots = 5 - _imageFiles.length;
-        List<XFile> filesToAdd = pickedFiles.take(remainingSlots).toList();
-
-        _imageFiles.addAll(filesToAdd.map((file) => File(file.path)));
-        if (pickedFiles.length > remainingSlots) {
-          _showDialog("Maksimal hanya bisa mengunggah 5 foto!", Colors.red);
+        int remaining = 10 - _imageFiles.length;
+        _imageFiles.addAll(
+          pickedFiles.take(remaining).map((xfile) => File(xfile.path)),
+        );
+        if (pickedFiles.length > remaining) {
+          _showDialog("Maksimal hanya bisa unggah 10 foto!", Colors.red);
         }
       });
     }
@@ -90,24 +97,17 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
       _showDialog("Silakan pilih ID Order!", Colors.red);
       return;
     }
-
-    if (_selectedOrder == null) {
-      _showDialog("Silakan pilih ID Order!", Colors.red);
-      return;
-    }
-
-    if (_catatan.isEmpty) {
+    if (_catatan.trim().isEmpty) {
       _showDialog("Catatan tidak boleh kosong!", Colors.red);
       return;
     }
-
     if (_imageFiles.isEmpty) {
-      _showDialog("Pilih setidaknya satu foto untuk diunggah!", Colors.red);
+      _showDialog("Pilih minimal satu foto!", Colors.red);
       return;
     }
 
     setState(() => _isUploading = true);
-    const String apiUrl = "http://192.168.1.104:8000/api/order-documents";
+    const String apiUrl = "http://192.168.1.104:8000/api/dokumentasi";
 
     try {
       var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
@@ -131,11 +131,19 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
 
       if (response.statusCode == 201) {
         _showSuccessDialog();
+        setState(() {
+          _imageFiles.clear();
+          _catatan = "";
+        });
       } else {
-        _showDialog("Gagal upload: $responseBody", Colors.red);
+        final error = jsonDecode(responseBody);
+        _showDialog(
+          "Gagal upload: ${error['message'] ?? 'Error tidak diketahui'}",
+          Colors.red,
+        );
       }
     } catch (e) {
-      _showDialog("Error: $e", Colors.red);
+      _showDialog("Kesalahan saat upload: $e", Colors.red);
     } finally {
       setState(() => _isUploading = false);
     }
@@ -144,39 +152,37 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
   void _showDialog(String message, Color color) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Pemberitahuan", style: TextStyle(color: color)),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
+      builder:
+          (_) => AlertDialog(
+            title: Text("Pemberitahuan", style: TextStyle(color: color)),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
     );
   }
 
   void _showSuccessDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Dokumentasi Berhasil!"),
-          content: const Text("Dokumentasi telah berhasil disimpan."),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Berhasil"),
+            content: const Text("Dokumentasi berhasil diunggah."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                },
+                child: Center(child: const Text("OK")),
+              ),
+            ],
+          ),
     );
   }
 
@@ -187,6 +193,8 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
       onChanged: onChanged,
+      maxLines: null,
+      keyboardType: TextInputType.multiline,
     );
   }
 
@@ -195,12 +203,10 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Buat Dokumentasi order"),
+        title: const Text("Buat Dokumentasi Order"),
         centerTitle: true,
-        elevation: 0,
         backgroundColor: Colors.grey[100],
-        shadowColor: Colors.transparent,
-        scrolledUnderElevation: 0,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -212,13 +218,12 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
             const SizedBox(height: 16),
             _buildImageUploadSection(),
             const SizedBox(height: 16),
-            _buildTextField("Catatan", (value) => _catatan = value),
+            _buildTextField("Catatan", (val) => _catatan = val),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _isUploading ? null : _postDokumentasi,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: const TextStyle(fontSize: 16),
               ),
               child:
                   _isUploading
@@ -232,30 +237,25 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
   }
 
   Widget _buildDropdownOrder() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: DropdownButtonFormField<String>(
-        isExpanded: true,
-        value: _selectedOrder,
-        decoration: InputDecoration(
-          labelText: "Pilih Order",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          contentPadding: EdgeInsets.symmetric(horizontal: 10),
-        ),
-        items:
-            _orderList.map((order) {
-              return DropdownMenuItem(
-                value: order["id"].toString(),
-                child: Text(
-                  "${order["nama_pemesan"]}",
-                  softWrap: true,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 16),
-                ),
-              );
-            }).toList(),
-        onChanged: (value) => setState(() => _selectedOrder = value),
+    return DropdownButtonFormField<String>(
+      isExpanded: true,
+      value: _selectedOrder,
+      decoration: InputDecoration(
+        labelText: "Pilih Order",
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
       ),
+      items:
+          _orderList.map((order) {
+            final displayName =
+                order["customer"]?["nama"]?.toString() ??
+                "Order ID ${order["id"]}";
+            return DropdownMenuItem(
+              value: order["id"].toString(),
+              child: Text(displayName, overflow: TextOverflow.ellipsis),
+            );
+          }).toList(),
+      onChanged: (value) => setState(() => _selectedOrder = value),
     );
   }
 
@@ -266,10 +266,10 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
-              "Upload Foto (Maksimal 5)",
+              "Upload Foto (Maksimal 10)",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),

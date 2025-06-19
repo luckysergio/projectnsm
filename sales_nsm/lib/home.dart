@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sales_nsm/dokumentasi.dart';
 import 'package:sales_nsm/dokumentasiorder.dart';
-import 'package:sales_nsm/order.dart';
+import 'package:sales_nsm/providers/order_service_provider.dart';
 import 'package:sales_nsm/statusorder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:badges/badges.dart' as badges;
 import 'historiorder.dart';
 import 'inventory.dart';
+import 'order.dart';
 import 'profile.dart';
-import 'providers/data_provider.dart';
+import 'package:sales_nsm/providers/order_count_provider.dart';
 import 'search_page.dart';
 
 class BerandaPage extends StatefulWidget {
@@ -81,55 +80,18 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    Future.microtask(() => _fetchDataCounts());
+    ref.read(orderServiceProvider);
   }
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    String? nik = prefs.getString('nik');
+    int? nik = prefs.getInt('nik');
     String? nama = prefs.getString('name');
 
-    if (nik != null && nama != null) {
-      setState(() {
-        _nikSales = nik;
-        _namaSales = nama;
-      });
-    }
-  }
-
-  Future<void> _fetchDataCounts() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
-
-    try {
-      final pengirimanUrl = Uri.parse(
-        "http://192.168.1.104:8000/api/count-orders1",
-      );
-
-      final pengirimanResponse = await http.get(
-        pengirimanUrl,
-        headers: {"Authorization": "Bearer $token"},
-      );
-
-      if (pengirimanResponse.statusCode == 200) {
-        final Map<String, dynamic> pengirimanData = json.decode(
-          pengirimanResponse.body,
-        );
-
-        // Ambil total_orders, bukan pengiriman
-        int jumlahPengiriman = pengirimanData['total_orders'] ?? 0;
-
-        debugPrint("Jumlah Pengiriman: $jumlahPengiriman");
-
-        ref.read(pengirimanCountProvider.notifier).state = jumlahPengiriman;
-
-        debugPrint("State Updated: ${ref.read(pengirimanCountProvider)}");
-      } else {
-        debugPrint("Gagal mengambil data: ${pengirimanResponse.statusCode}");
-      }
-    } catch (e) {
-      debugPrint("Error fetching data: $e");
-    }
+    setState(() {
+      _nikSales = nik?.toString() ?? "Nomer Induk Karyawan";
+      _namaSales = nama ?? "Nama Sales";
+    });
   }
 
   @override
@@ -137,7 +99,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
-          await _fetchDataCounts();
+          await ref.read(orderServiceProvider).fetchOrderCount();
         },
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -424,15 +386,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               context,
               MaterialPageRoute(builder: (context) => const OrderPage()),
             );
-
             if (result == true) {
-              _fetchDataCounts();
+              await ref.read(orderServiceProvider).fetchOrderCount();
             }
           },
         ),
         Consumer(
           builder: (context, ref, child) {
-            final jumlahPengiriman = ref.watch(pengirimanCountProvider);
+            final jumlahOrderAktif = ref.watch(orderCountProvider);
             return _buildCategoryButton(
               "Melihat status order",
               Icons.local_shipping,
@@ -445,7 +406,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 );
               },
-              badgeCount: jumlahPengiriman,
+              badgeCount: jumlahOrderAktif,
             );
           },
         ),

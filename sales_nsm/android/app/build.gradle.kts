@@ -1,10 +1,7 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -14,23 +11,22 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
-        // Membuat kompatibilitas dengan Java 17
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
         jvmTarget = "17"
     }
 
-    // Enable desugaring untuk Java 8
     defaultConfig {
         applicationId = "com.example.sales_nsm"
         minSdk = 21
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true  // Jika perlu untuk aplikasi besar
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -39,7 +35,6 @@ android {
         }
     }
 
-    // Enable desugaring library (untuk Java 8+ fitur)
     dexOptions {
         javaMaxHeapSize = "4g"
     }
@@ -47,4 +42,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
