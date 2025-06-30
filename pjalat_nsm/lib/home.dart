@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pjalat_nsm/login.dart';
 import 'package:pjalat_nsm/providers/order_count_provider.dart';
 import 'package:pjalat_nsm/providers/order_service_provider.dart';
 import 'package:pjalat_nsm/providers/perawatan_count_provider.dart';
 import 'package:pjalat_nsm/providers/perawatan_service_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'package:http/http.dart' as http;
 import 'package:badges/badges.dart' as badges;
 import 'jadwalpengiriman.dart';
 import 'jadwalperawatan.dart';
@@ -76,27 +78,70 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class HomeScreenState extends ConsumerState<HomeScreen> {
-  String _namaSales = "Nama Sales";
-  String _nikSales = "Nomer Induk Karyawan";
+  String _namaPjalat = "Nama Penanggung jawab alat";
+  String _nikPjalat = "Nomer Induk Karyawan";
 
   @override
   void initState() {
     super.initState();
+    checkTokenValidity(context);
     _loadUserData();
     ref.read(orderServiceProvider);
     ref.read(perawatanServiceProvider);
   }
 
+  Future<void> checkTokenValidity(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://192.168.1.101:8000/api/auth/check'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        await prefs.clear();
+        if (!context.mounted) return;
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (_) => AlertDialog(
+                title: const Text('Sesi Habis'),
+                content: const Text(
+                  'Sesi login Anda telah habis. Silakan login kembali.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Token check error: $e');
+    }
+  }
+
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    List<String>? userData = prefs.getStringList('user');
 
-    if (userData != null && userData.length >= 2) {
-      setState(() {
-        _nikSales = userData[0];
-        _namaSales = userData[1];
-      });
-    }
+    setState(() {
+      _nikPjalat = prefs.getInt('nik')?.toString() ?? 'NIK tidak ditemukan';
+      _namaPjalat = prefs.getString('name') ?? 'Nama tidak ditemukan';
+    });
   }
 
   @override
@@ -105,6 +150,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       child: RefreshIndicator(
         onRefresh: () async {
           await ref.read(orderServiceProvider).fetchOrderCount();
+          await ref.read(perawatanServiceProvider).fetchPerawatanCount();
         },
         backgroundColor: Colors.grey[100],
         child: ListView(
@@ -141,13 +187,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _namaSales,
+                  _namaPjalat,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(_nikSales, style: TextStyle(color: Colors.grey[600])),
+                Text(_nikPjalat, style: TextStyle(color: Colors.grey[600])),
               ],
             ),
           ],
@@ -423,7 +469,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const JadwalPerawatanPage(),
+                    builder: (context) => const JadwalPerrawatanPage(),
                   ),
                 );
               },

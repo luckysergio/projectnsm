@@ -67,7 +67,6 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _checkPermissions() async {
     await [Permission.camera, Permission.storage, Permission.photos].request();
 
-    // Simulasi delay splash screen
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {

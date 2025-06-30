@@ -49,10 +49,12 @@ class DetailPage extends StatelessWidget {
     final sisa = tagihan - totalDibayar;
 
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text("SEWA-00${data['id']}"),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: Colors.grey[50],
         scrolledUnderElevation: 0,
       ),
       body: ListView(
@@ -71,9 +73,14 @@ class DetailPage extends StatelessWidget {
                   _buildRow("Pemesan", data["nama_pemesan"] ?? "-"),
                   _buildRow("Alamat Order", data["alamat"] ?? "-"),
                   const Divider(),
-                  const Text(
-                    "Detail Order",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Center(
+                    child: const Text(
+                      "Detail Order",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   if (detailOrders.isEmpty)
@@ -122,7 +129,7 @@ class DetailPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   if (detailPembayarans.isNotEmpty)
                     Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const Text(
                           "Bukti Pembayaran",
@@ -134,7 +141,7 @@ class DetailPage extends StatelessWidget {
                         const SizedBox(height: 10),
                         ...detailPembayarans.map((item) {
                           return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
                                 "Jumlah Dibayar: ${formatRupiah(item['jml_dibayar'])}",

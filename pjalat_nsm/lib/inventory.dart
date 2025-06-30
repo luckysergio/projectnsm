@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class InventoryPage extends StatefulWidget {
@@ -11,11 +12,11 @@ class InventoryPage extends StatefulWidget {
 }
 
 class _InventoryPageState extends State<InventoryPage> {
-  String? _selectedCategory;
+  String? _selectedCategoryTitle;
   bool _isLoading = false;
   List<Map<String, dynamic>> _inventoryList = [];
 
-  final String apiUrl = "http://192.168.1.104:8000/api/inventory";
+  final String apiBaseUrl = "http://192.168.1.101:8000/api/inventory";
 
   final List<Map<String, String>> pompaCategories = const [
     {
@@ -36,7 +37,7 @@ class _InventoryPageState extends State<InventoryPage> {
     {
       "title": "Pompa Super Long",
       "image": "assets/images/super-longboom.png",
-      "api_value": "pompa_superlong",
+      "api_value": "pompa_super_longboom",
     },
     {
       "title": "Pompa Kodok",
@@ -51,48 +52,55 @@ class _InventoryPageState extends State<InventoryPage> {
       _inventoryList = [];
     });
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
     if (!mounted) return;
 
     if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Token tidak ditemukan, silakan login ulang!"),
-        ),
-      );
-      setState(() {
-        _isLoading = false;
-      });
+      _showMessage("Token tidak ditemukan. Silakan login ulang.");
+      setState(() => _isLoading = false);
       return;
     }
 
-    final response = await http.get(
-      Uri.parse("$apiUrl/$category"),
-      headers: {"Authorization": "Bearer $token", "Accept": "application/json"},
-    );
+    final url = Uri.parse("$apiBaseUrl/$category");
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      setState(() {
-        _inventoryList = data.cast<Map<String, dynamic>>();
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Gagal mengambil data, coba lagi! Error: ${response.statusCode}",
-          ),
-        ),
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
       );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        final List<dynamic> data = jsonResponse['data'];
+
+        setState(() {
+          _inventoryList =
+              data.map((e) => Map<String, dynamic>.from(e)).toList();
+          _isLoading = false;
+        });
+      } else if (response.statusCode == 401) {
+        _showMessage("Token tidak valid. Silakan login ulang.");
+        setState(() => _isLoading = false);
+      } else {
+        _showMessage("Gagal mengambil data (${response.statusCode})");
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      _showMessage("Terjadi kesalahan: $e");
+      setState(() => _isLoading = false);
     }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -100,12 +108,10 @@ class _InventoryPageState extends State<InventoryPage> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Inventori alat"),
+        title: const Text("Inventory Alat"),
         centerTitle: true,
-        elevation: 0,
         backgroundColor: Colors.grey[100],
-        shadowColor: Colors.transparent,
-        scrolledUnderElevation: 0,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -116,8 +122,8 @@ class _InventoryPageState extends State<InventoryPage> {
             const SizedBox(height: 12),
             _buildCategoryList(),
             const SizedBox(height: 20),
-            if (_selectedCategory != null)
-              _buildTitle("Daftar $_selectedCategory"),
+            if (_selectedCategoryTitle != null)
+              _buildTitle("Daftar $_selectedCategoryTitle"),
             const SizedBox(height: 10),
             Expanded(
               child:
@@ -125,7 +131,7 @@ class _InventoryPageState extends State<InventoryPage> {
                       ? const Center(child: CircularProgressIndicator())
                       : _inventoryList.isEmpty
                       ? _buildEmptyState()
-                      : _buildPompaList(),
+                      : _buildInventoryList(),
             ),
           ],
         ),
@@ -147,36 +153,37 @@ class _InventoryPageState extends State<InventoryPage> {
         scrollDirection: Axis.horizontal,
         itemCount: pompaCategories.length,
         itemBuilder: (context, index) {
-          final pompa = pompaCategories[index];
+          final category = pompaCategories[index];
+          final isSelected = _selectedCategoryTitle == category["title"];
 
           return GestureDetector(
             onTap: () {
               setState(() {
-                _selectedCategory = pompa["title"];
+                _selectedCategoryTitle = category["title"];
               });
-              _fetchInventory(pompa["api_value"]!);
+              _fetchInventory(category["api_value"]!);
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               margin: const EdgeInsets.only(right: 16),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
+                color: isSelected ? Colors.blue[100] : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
-                  BoxShadow(color: Colors.black26.withAlpha(50), blurRadius: 5),
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: const Offset(2, 2),
+                  ),
                 ],
-                color:
-                    _selectedCategory == pompa["title"]
-                        ? Colors.blue.shade100
-                        : Colors.white,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
-                      pompa["image"]!,
+                      category["image"]!,
                       width: 120,
                       height: 80,
                       fit: BoxFit.cover,
@@ -184,7 +191,7 @@ class _InventoryPageState extends State<InventoryPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    pompa["title"]!,
+                    category["title"]!,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -208,34 +215,66 @@ class _InventoryPageState extends State<InventoryPage> {
     );
   }
 
-  Widget _buildPompaList() {
+  Widget _buildInventoryList() {
     return ListView.builder(
       itemCount: _inventoryList.length,
       itemBuilder: (context, index) {
-        final pompa = _inventoryList[index];
+        final item = _inventoryList[index];
+        final nama = item["nama"] ?? "Tidak diketahui";
+        final status = item["status"] ?? "tidak_diketahui";
+
+        final hargaRaw = item["harga"];
+        double harga = 0;
+        if (hargaRaw is String) {
+          harga = double.tryParse(hargaRaw) ?? 0;
+        } else if (hargaRaw is num) {
+          harga = hargaRaw.toDouble();
+        }
+
+        final hargaFormatted = NumberFormat.currency(
+          locale: 'id_ID',
+          symbol: 'Rp ',
+          decimalDigits: 0,
+        ).format(harga);
+
         return Card(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           margin: const EdgeInsets.only(bottom: 12),
+          elevation: 4,
           child: ListTile(
-            title: Text(
-              pompa["nama_alat"],
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
             ),
-            subtitle: Text(
-              "Waktu Pemakaian: ${pompa["waktu_pemakaian"]} Jam",
-              style: const TextStyle(fontSize: 14),
+            title: Text(
+              nama,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Pemakaian: ${item["pemakaian"] ?? "-"} Jam"),
+                const SizedBox(height: 6),
+                Text(
+                  "Harga: $hargaFormatted / Jam",
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _getStatusColor(pompa["status"]),
+                color: _getStatusColor(status),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                pompa["status"].toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                status.toString().toUpperCase(),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ),
@@ -246,11 +285,11 @@ class _InventoryPageState extends State<InventoryPage> {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case "tersedia":
+      case 'tersedia':
         return Colors.green;
-      case "sedang_disewa":
+      case 'disewa':
         return Colors.orange;
-      case "sedang_perawatan":
+      case 'perawatan':
         return Colors.red;
       default:
         return Colors.grey;

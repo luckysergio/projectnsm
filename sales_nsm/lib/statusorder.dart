@@ -31,7 +31,7 @@ class StatusOrderPageState extends State<StatusOrderPage> {
     }
 
     final response = await http.get(
-      Uri.parse("http://192.168.1.104:8000/api/orders/active"),
+      Uri.parse("http://192.168.1.101:8000/api/orders/active"),
       headers: {"Authorization": "Bearer $_token"},
     );
 

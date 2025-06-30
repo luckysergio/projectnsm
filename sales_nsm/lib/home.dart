@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sales_nsm/dokumentasi.dart';
 import 'package:sales_nsm/dokumentasiorder.dart';
+import 'package:sales_nsm/login.dart';
 import 'package:sales_nsm/providers/order_service_provider.dart';
 import 'package:sales_nsm/statusorder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'package:badges/badges.dart' as badges;
 import 'historiorder.dart';
 import 'inventory.dart';
@@ -79,8 +81,54 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    checkTokenValidity(context);
     _loadUserData();
     ref.read(orderServiceProvider);
+  }
+
+  Future<void> checkTokenValidity(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://192.168.1.101:8000/api/auth/check'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        await prefs.clear();
+        if (!context.mounted) return;
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (_) => AlertDialog(
+                title: const Text('Sesi Habis'),
+                content: const Text(
+                  'Sesi login Anda telah habis. Silakan login kembali.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Token check error: $e');
+    }
   }
 
   Future<void> _loadUserData() async {

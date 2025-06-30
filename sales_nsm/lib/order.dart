@@ -70,7 +70,7 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> _fetchAlatTersedia() async {
-    const String apiUrl = "http://192.168.1.104:8000/api/inventory-tersedia";
+    const String apiUrl = "http://192.168.1.101:8000/api/inventory-tersedia";
 
     try {
       final response = await http.get(
@@ -95,7 +95,7 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> _fetchCustomers() async {
-    const String apiUrl = "http://192.168.1.104:8000/api/customer";
+    const String apiUrl = "http://192.168.1.101:8000/api/customer";
 
     try {
       final response = await http.get(
@@ -131,7 +131,7 @@ class _OrderPageState extends State<OrderPage> {
         'jam_mulai': null,
         'tgl_selesai': null,
         'jam_selesai': null,
-        'total_sewa': 1,
+        'total_sewa': 8,
         'catatan': '',
       });
     });
@@ -196,8 +196,8 @@ class _OrderPageState extends State<OrderPage> {
         _showErrorDialog("Jam mulai harus diisi untuk item ${i + 1}");
         return;
       }
-      if (detail['total_sewa'] <= 0) {
-        _showErrorDialog("Jumlah sewa harus lebih dari 0 untuk item ${i + 1}");
+      if (detail['total_sewa'] < 8) {
+        _showErrorDialog("Sewa minimal 8 Jam untuk item ${i + 1}");
         return;
       }
     }
@@ -225,7 +225,7 @@ class _OrderPageState extends State<OrderPage> {
       }
 
       final response = await http.post(
-        Uri.parse("http://192.168.1.104:8000/api/order"),
+        Uri.parse("http://192.168.1.101:8000/api/order"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $_token",
@@ -327,25 +327,27 @@ class _OrderPageState extends State<OrderPage> {
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.pop(context, true);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 30,
-                      vertical: 12,
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pop(context, true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 30,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Center(
-                    child: const Text(
-                      "OK",
-                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    child: Center(
+                      child: const Text(
+                        "OK",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
                     ),
                   ),
                 ),
@@ -461,7 +463,6 @@ class _OrderPageState extends State<OrderPage> {
 
                       const SizedBox(height: 20),
 
-                      // Order Details Section
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -593,7 +594,6 @@ class _OrderPageState extends State<OrderPage> {
             ),
             const SizedBox(height: 10),
 
-            // Dropdown Alat
             DropdownButtonFormField<int>(
               value: detail['id_alat'],
               decoration: InputDecoration(
@@ -622,7 +622,6 @@ class _OrderPageState extends State<OrderPage> {
 
             const SizedBox(height: 10),
 
-            // Alamat
             TextFormField(
               initialValue: detail['alamat'],
               decoration: InputDecoration(
@@ -645,7 +644,6 @@ class _OrderPageState extends State<OrderPage> {
 
             const SizedBox(height: 10),
 
-            // Tanggal dan Jam Mulai
             Row(
               children: [
                 Expanded(
@@ -674,7 +672,6 @@ class _OrderPageState extends State<OrderPage> {
 
             const SizedBox(height: 10),
 
-            // Tanggal dan Jam Selesai (Optional)
             Row(
               children: [
                 Expanded(
@@ -709,7 +706,6 @@ class _OrderPageState extends State<OrderPage> {
 
             const SizedBox(height: 10),
 
-            // Total Sewa
             _buildStepperTextField("Jumlah Sewa", detail['total_sewa'], (
               value,
             ) {
@@ -720,7 +716,6 @@ class _OrderPageState extends State<OrderPage> {
 
             const SizedBox(height: 10),
 
-            // Catatan
             TextFormField(
               initialValue: detail['catatan'],
               decoration: InputDecoration(
@@ -913,7 +908,7 @@ class _OrderPageState extends State<OrderPage> {
             onChanged: (newValue) {
               if (newValue.isNotEmpty && int.tryParse(newValue) != null) {
                 int parsedValue = int.parse(newValue);
-                if (parsedValue >= 1) {
+                if (parsedValue >= 8) {
                   onValueChanged(parsedValue);
                 }
               }
@@ -923,7 +918,7 @@ class _OrderPageState extends State<OrderPage> {
         IconButton(
           icon: const Icon(Icons.remove, color: Colors.red),
           onPressed:
-              value > 1
+              value > 8
                   ? () {
                     onValueChanged(value - 1);
                   }

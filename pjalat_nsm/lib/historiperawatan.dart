@@ -2,43 +2,59 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class HistoriPerawatanPage extends StatefulWidget {
   const HistoriPerawatanPage({super.key});
 
   @override
-  HistoriPerawatanPageState createState() => HistoriPerawatanPageState();
+  State<HistoriPerawatanPage> createState() => _HistoriPerawatanPageState();
 }
 
-class HistoriPerawatanPageState extends State<HistoriPerawatanPage> {
-  late Future<List<Map<String, dynamic>>> _perawatanFuture;
-  String? _token;
+class _HistoriPerawatanPageState extends State<HistoriPerawatanPage> {
+  late Future<List<Map<String, dynamic>>> _perawatanList;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _perawatanFuture = _fetchPerawatan();
+    _perawatanList = _fetchHistoryPerawatan();
   }
 
-  Future<List<Map<String, dynamic>>> _fetchPerawatan() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('token');
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-    if (_token == null) {
-      throw Exception("Token tidak ditemukan, silakan login kembali.");
+  Future<List<Map<String, dynamic>>> _fetchHistoryPerawatan() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) throw Exception("Token tidak ditemukan");
+
+      final response = await http.get(
+        Uri.parse("http://192.168.1.101:8000/api/perawatan/selesai"),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return List<Map<String, dynamic>>.from(data['perawatans'] ?? []);
+      } else {
+        throw Exception(
+          "Gagal memuat data. Status code: ${response.statusCode}",
+        );
+      }
+    } catch (e) {
+      throw Exception("Error: ${e.toString()}");
     }
+  }
 
-    final response = await http.get(
-      Uri.parse("http://192.168.1.104:8000/api/perawatan/proses-selesai"),
-      headers: {"Authorization": "Bearer $_token"},
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return List<Map<String, dynamic>>.from(data["perawatan"]);
-    } else {
-      throw Exception("Gagal mengambil data histori perawatan.");
-    }
+  Future<void> _refreshData() async {
+    setState(() {
+      _perawatanList = _fetchHistoryPerawatan();
+    });
   }
 
   @override
@@ -48,79 +64,142 @@ class HistoriPerawatanPageState extends State<HistoriPerawatanPage> {
       appBar: AppBar(
         title: const Text("Histori Perawatan"),
         centerTitle: true,
+        elevation: 0,
         backgroundColor: Colors.grey[100],
-        shadowColor: Colors.transparent,
-        scrolledUnderElevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
         child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _perawatanFuture,
+          future: _perawatanList,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}"));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text("Tidak ada histori perawatan."));
             }
 
-            final perawatan = snapshot.data!;
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Gagal memuat data",
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _refreshData,
+                      child: const Text("Coba Lagi"),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final perawatans = snapshot.data!;
+            if (perawatans.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.history_toggle_off,
+                      color: Colors.grey,
+                      size: 48,
+                    ),
+                    SizedBox(height: 16),
+                    Text("Belum ada histori perawatan"),
+                  ],
+                ),
+              );
+            }
+
             return ListView.builder(
-              itemCount: perawatan.length,
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: perawatans.length,
               itemBuilder: (context, index) {
-                final item = perawatan[index];
-                return _buildPerawatanCard(item);
+                final perawatan = perawatans[index];
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => DetailPerawatanPage(perawatan: perawatan),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.history,
+                              color: Colors.blue,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "PRW-${perawatan['id'].toString().padLeft(3, '0')}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Operator: ${perawatan['operator']?['nama'] ?? '-'}",
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
               },
             );
           },
         ),
-      ),
-    );
-  }
-
-  Widget _buildPerawatanCard(Map<String, dynamic> perawatan) {
-    return Card(
-      elevation: 5,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white,
-      child: ListTile(
-        leading: const Icon(Icons.build, color: Colors.blue, size: 40),
-        title: Text(
-          "${perawatan['inventori_name']}",
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Operator: ${perawatan['operator_name'] ?? '-'}"),
-            Text("Tanggal Mulai: ${perawatan['tanggal_mulai'] ?? '-'}"),
-            Text("Tanggal Selesai: ${perawatan['tanggal_selesai'] ?? '-'}"),
-            Text(
-              "Status: ${perawatan['status_perawatan']}",
-              style: TextStyle(
-                color:
-                    perawatan['status_perawatan'] == "diproses"
-                        ? Colors.orange
-                        : Colors.green,
-              ),
-            ),
-          ],
-        ),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 18,
-          color: Colors.blue,
-        ),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DetailPerawatanPage(perawatan: perawatan),
-            ),
-          );
-        },
       ),
     );
   }
@@ -130,106 +209,171 @@ class DetailPerawatanPage extends StatelessWidget {
   final Map<String, dynamic> perawatan;
   const DetailPerawatanPage({super.key, required this.perawatan});
 
+  String formatDate(String? dateStr) {
+    if (dateStr == null) return '-';
+    try {
+      return DateFormat('dd-MM-yyyy').format(DateTime.parse(dateStr));
+    } catch (e) {
+      return '-';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final List detailPerawatans = perawatan["detail_perawatans"] ?? [];
+    final operator = perawatan["operator"] ?? {};
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text("Detail Perawatan ${perawatan['id']}"),
+        title: Text("PRW-${perawatan['id'].toString().padLeft(3, '0')}"),
         centerTitle: true,
+        elevation: 0,
         backgroundColor: Colors.grey[100],
-        shadowColor: Colors.transparent,
-        scrolledUnderElevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 5,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow("ID Perawatan", perawatan["id"].toString()),
-                _buildDetailRow(
-                  "Nama Alat",
-                  perawatan["inventori_name"] ?? "-",
-                ),
-                _buildDetailRow("Operator", perawatan["operator_name"] ?? "-"),
-                _buildDetailRow(
-                  "Tanggal Mulai",
-                  perawatan["tanggal_mulai"] ?? "-",
-                ),
-                _buildDetailRow(
-                  "Tanggal Selesai",
-                  perawatan["tanggal_selesai"] ?? "-",
-                ),
-                _buildDetailRow("Catatan", perawatan["catatan"] ?? "-"),
-                _buildDetailRow(
-                  "Status",
-                  perawatan["status_perawatan"] ?? "-",
-                  color:
-                      perawatan["status_perawatan"] == "diproses"
-                          ? Colors.orange
-                          : Colors.green,
-                ),
-                const SizedBox(height: 20),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoRow(
+                      icon: Icons.person,
+                      title: "Operator",
+                      value: operator['nama']?.toString() ?? '-',
+                    ),
+                    const Divider(height: 24),
+                    const Center(
+                      child: Text(
+                        "Detail Perawatan",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      "Kembali",
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
-                  ),
+                    const SizedBox(height: 12),
+                    if (detailPerawatans.isEmpty)
+                      const Center(child: Text("Tidak ada detail perawatan")),
+                    ...detailPerawatans.map((detail) {
+                      final alat = detail["alat"] ?? {};
+                      return Column(
+                        children: [
+                          _buildDetailCard(
+                            alat: alat,
+                            detail: Map<String, dynamic>.from(detail),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      );
+                    }),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    Color color = Colors.black,
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String title,
+    required String value,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailCard({
+    required Map<String, dynamic> alat,
+    required Map<String, dynamic> detail,
+  }) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Text(
+                alat['nama']?.toString() ?? 'Alat Tidak Diketahui',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildDetailRow("Status", detail['status']?.toString() ?? '-'),
+            if (detail['catatan'] != null &&
+                detail['catatan'].toString().isNotEmpty)
+              _buildDetailRow("Catatan", detail['catatan'].toString()),
+            _buildDetailRow("Tanggal Mulai", formatDate(detail['tgl_mulai'])),
+            _buildDetailRow(
+              "Tanggal Selesai",
+              formatDate(detail['tgl_selesai']),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 2,
             child: Text(
-              label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              title,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
           ),
-          const SizedBox(width: 8),
           Expanded(
             flex: 3,
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 16, color: color),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-            ),
+            child: Text(value, style: const TextStyle(fontSize: 13)),
           ),
         ],
       ),

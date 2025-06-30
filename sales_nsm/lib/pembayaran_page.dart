@@ -22,7 +22,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
   bool _isLoading = false;
   String? _token;
 
-  final String baseUrl = 'http://192.168.1.104:8000/api';
+  final String baseUrl = 'http://192.168.1.101:8000/api';
 
   String formatCurrency(dynamic number) {
     try {
@@ -113,6 +113,25 @@ class _PembayaranPageState extends State<PembayaranPage> {
   }
 
   void _showConfirmationDialog() {
+    if (_selectedImage == null) {
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: Center(child: const Text('Peringatan')),
+              content: const Text(
+                'Silakan upload bukti pembayaran terlebih dahulu.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Center(child: const Text('OK')),
+                ),
+              ],
+            ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -228,7 +247,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                 Navigator.of(context).pop(true);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
               child: Center(child: const Text('OK')),
@@ -271,7 +290,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('OK'),
+              child: Center(child: const Text('OK')),
             ),
           ],
         );
@@ -296,7 +315,6 @@ class _PembayaranPageState extends State<PembayaranPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Info ID Pembayaran
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -376,7 +394,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Bukti Pembayaran (Opsional)',
+                        'Bukti Pembayaran',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -463,7 +481,6 @@ class _PembayaranPageState extends State<PembayaranPage> {
               ),
               const SizedBox(height: 30),
 
-              // Submit Button
               SizedBox(
                 height: 50,
                 child: ElevatedButton(

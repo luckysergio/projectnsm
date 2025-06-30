@@ -21,7 +21,7 @@ class _DokumentasiHistoriPageState extends State<DokumentasiHistoriPage> {
   }
 
   Future<void> _fetchHistory() async {
-    const String apiUrl = "http://192.168.1.104:8000/api/order-documents";
+    const String apiUrl = "http://192.168.1.101:8000/api/order-documents";
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 

@@ -26,7 +26,7 @@ class _HistoriOrderPageState extends State<HistoriOrderPage> {
     if (token == null) throw Exception("Token tidak ditemukan.");
 
     final response = await http.get(
-      Uri.parse("http://192.168.1.104:8000/api/orders/completed"),
+      Uri.parse("http://192.168.1.101:8000/api/orders/completed"),
       headers: {'Authorization': 'Bearer $token'},
     );
 

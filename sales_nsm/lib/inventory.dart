@@ -16,7 +16,7 @@ class _InventoryPageState extends State<InventoryPage> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _inventoryList = [];
 
-  final String apiBaseUrl = "http://192.168.1.104:8000/api/inventory";
+  final String apiBaseUrl = "http://192.168.1.101:8000/api/inventory";
 
   final List<Map<String, String>> pompaCategories = const [
     {
@@ -32,12 +32,12 @@ class _InventoryPageState extends State<InventoryPage> {
     {
       "title": "Pompa Long Boom",
       "image": "assets/images/longboom.png",
-      "api_value": "pompa_long_boom",
+      "api_value": "pompa_longboom",
     },
     {
       "title": "Pompa Super Long",
       "image": "assets/images/super-longboom.png",
-      "api_value": "pompa_super_long",
+      "api_value": "pompa_super_longboom",
     },
     {
       "title": "Pompa Kodok",

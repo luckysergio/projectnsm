@@ -22,6 +22,16 @@ class ProfilePageState extends State<ProfilePage> {
   bool hasError = false;
   String? token;
 
+  bool showChangePasswordForm = false;
+  bool obscureOld = true;
+  bool obscureNew = true;
+  bool obscureConfirm = true;
+  bool isChangingPassword = false;
+
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -41,12 +51,11 @@ class ProfilePageState extends State<ProfilePage> {
     }
 
     await Future.wait([fetchProfile(), fetchCompletedOrdersCount()]);
-
     setState(() => isLoading = false);
   }
 
   Future<void> fetchProfile() async {
-    const String apiUrl = "http://192.168.1.104:8000/api/auth/me";
+    const String apiUrl = "http://192.168.1.101:8000/api/auth/me";
 
     try {
       final response = await http.get(
@@ -56,7 +65,6 @@ class ProfilePageState extends State<ProfilePage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         final user = data['user'] ?? {};
         final karyawan = user['karyawan'] ?? {};
         final role = karyawan['role'] ?? {};
@@ -76,7 +84,7 @@ class ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchCompletedOrdersCount() async {
-    const String apiUrl = "http://192.168.1.104:8000/api/orders/completed";
+    const String apiUrl = "http://192.168.1.101:8000/api/orders/completed";
 
     try {
       final response = await http.get(
@@ -99,6 +107,51 @@ class ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _changePassword() async {
+    final oldPassword = _oldPasswordController.text;
+    final newPassword = _newPasswordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (newPassword != confirmPassword) {
+      showErrorDialog("Password baru dan konfirmasi tidak cocok.");
+      return;
+    }
+
+    setState(() {
+      isChangingPassword = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse("http://192.168.1.101:8000/api/auth/change-password"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+        body: {
+          "old_password": oldPassword,
+          "new_password": newPassword,
+          "new_password_confirmation": confirmPassword,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        showSuccessDialog("Password berhasil diubah.");
+        setState(() {
+          showChangePasswordForm = false;
+          _oldPasswordController.clear();
+          _newPasswordController.clear();
+          _confirmPasswordController.clear();
+        });
+      } else {
+        final error = jsonDecode(response.body);
+        showErrorDialog(error['error'] ?? "Gagal mengubah password.");
+      }
+    } catch (e) {
+      showErrorDialog("Terjadi kesalahan saat mengubah password.");
+    }
+  }
+
   Future<void> _logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final storedToken = prefs.getString('token');
@@ -110,7 +163,7 @@ class ProfilePageState extends State<ProfilePage> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.1.104:8000/api/auth/logout"),
+        Uri.parse("http://192.168.1.101:8000/api/auth/logout"),
         headers: {"Authorization": "Bearer $storedToken"},
       );
 
@@ -118,10 +171,10 @@ class ProfilePageState extends State<ProfilePage> {
         await prefs.clear();
         _navigateToLogin();
       } else {
-        _showErrorDialog("Gagal logout, coba lagi.");
+        showErrorDialog("Gagal logout, coba lagi.");
       }
     } catch (e) {
-      _showErrorDialog("Terjadi kesalahan saat logout.");
+      showErrorDialog("Terjadi kesalahan saat logout.");
     }
   }
 
@@ -132,21 +185,37 @@ class ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showErrorDialog(String message) {
+  void showSuccessDialog(String message) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Logout Gagal"),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Tutup"),
-            ),
-          ],
-        );
-      },
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Berhasil"),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK", style: TextStyle(color: Colors.green)),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Gagal"),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Tutup", style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
     );
   }
 
@@ -247,7 +316,59 @@ class ProfilePageState extends State<ProfilePage> {
           completedOrdersCount.toString(),
           Icons.check_circle,
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            setState(() => showChangePasswordForm = !showChangePasswordForm);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          child: Text(
+            showChangePasswordForm ? "Batal Ganti Password" : "Ganti Password",
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        if (showChangePasswordForm) ...[
+          const SizedBox(height: 16),
+          _buildPasswordField(
+            "Password Lama",
+            _oldPasswordController,
+            obscureOld,
+            () => setState(() => obscureOld = !obscureOld),
+          ),
+          const SizedBox(height: 10),
+          _buildPasswordField(
+            "Password Baru",
+            _newPasswordController,
+            obscureNew,
+            () => setState(() => obscureNew = !obscureNew),
+          ),
+          const SizedBox(height: 10),
+          _buildPasswordField(
+            "Konfirmasi Password Baru",
+            _confirmPasswordController,
+            obscureConfirm,
+            () => setState(() => obscureConfirm = !obscureConfirm),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: isChangingPassword ? null : _changePassword,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text(
+              "Simpan Password",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+        ],
       ],
     );
   }
@@ -291,6 +412,30 @@ class ProfilePageState extends State<ProfilePage> {
         subtitle: Text(
           value,
           style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField(
+    String label,
+    TextEditingController controller,
+    bool obscure,
+    VoidCallback toggleObscure,
+  ) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: IconButton(
+          icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+          onPressed: toggleObscure,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
       ),
     );

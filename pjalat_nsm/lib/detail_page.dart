@@ -7,212 +7,388 @@ class DetailPage extends StatelessWidget {
 
   const DetailPage({super.key, required this.data, required this.isOrder});
 
-  String formatRupiah(double amount) {
-    final NumberFormat rupiahFormat = NumberFormat(
-      "#,##0",
-      "id_ID",
-    ); // Format tanpa desimal
-    return "RP. ${rupiahFormat.format(amount)}"; // Menambahkan 'RP.' di depan
-  }
-
-  double? parseDouble(String? value) {
-    if (value == null || value.isEmpty) return null;
-    return double.tryParse(value);
-  }
-
-  // Fungsi untuk format overtime agar tanpa desimal jika berupa angka bulat
-  String formatOvertime(double overtime) {
-    if (overtime == overtime.toInt()) {
-      return overtime.toInt().toString(); // Menghapus desimal jika angka bulat
-    } else {
-      return overtime.toString();
-    }
-  }
-
-  // Fungsi untuk format tanggal
   String formatDate(String? date) {
     if (date == null || date.isEmpty) return "-";
     try {
       DateTime parsedDate = DateTime.parse(date);
-      return DateFormat(
-        'dd-MM-yyyy',
-      ).format(parsedDate); // format tanggal ke dd/MM/yyyy
+      return DateFormat('dd-MM-yyyy').format(parsedDate);
     } catch (e) {
-      return "-"; // jika format tanggal tidak valid
+      return "-";
     }
   }
 
   String formatJam(String? time) {
     if (time == null || time.isEmpty) return "-";
     try {
-      DateTime parsedTime = DateTime.parse(
-        "1970-01-01T$time",
-      ); // Parsing waktu (anggap tanggalnya tidak penting)
-      return "${DateFormat('HH.mm').format(parsedTime)} WIB"; // Format jam dan menit, lalu tambahkan 'WIB'
+      DateTime parsedTime = DateTime.parse("1970-01-01T$time");
+      return "${DateFormat('HH.mm').format(parsedTime)} WIB";
     } catch (e) {
-      return "-"; // Jika format waktu tidak valid
+      return "-";
     }
+  }
+
+  String formatRupiah(dynamic number) {
+    final formatCurrency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatCurrency.format(int.tryParse(number.toString()) ?? 0);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text(isOrder ? "Detail Order" : "Detail Perawatan"),
+        title: Text(
+          isOrder ? "SEWA-00${data['id']}" : "PERAWATAN-00${data['id']}",
+        ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.grey[100],
-        shadowColor: Colors.transparent,
         scrolledUnderElevation: 0,
+        backgroundColor: isOrder ? Colors.blue[50] : Colors.green[50],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: isOrder ? _buildOrderDetail() : _buildPerawatanDetail(),
+    );
+  }
+
+  Widget _buildOrderDetail() {
+    final List detailPembayarans = data["detail_pembayarans"] ?? [];
+    final List detailOrders = data["detail_orders"] ?? [];
+    final tagihan = data["tagihan"] ?? 0;
+
+    final totalDibayar = detailPembayarans.fold<int>(
+      0,
+      (sum, item) => sum + (int.tryParse(item["jml_dibayar"].toString()) ?? 0),
+    );
+    final sisa = tagihan - totalDibayar;
+
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        Card(
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader(
+                  "Informasi Order",
+                  Icons.shopping_cart,
+                  Colors.blue,
+                ),
+                const SizedBox(height: 12),
+                _buildRow("Pemesan", data["nama_pemesan"] ?? "-"),
+                _buildRow("Sales", data["nama_sales"] ?? "-"),
+                const Divider(height: 32),
+                _buildSectionHeader(
+                  "Detail Order",
+                  Icons.list_alt,
+                  Colors.blue,
+                ),
+                const SizedBox(height: 12),
+                if (detailOrders.isEmpty)
+                  const Text("Tidak ada detail order.")
+                else
+                  ...detailOrders.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final detail = entry.value;
+                    return _buildOrderDetailCard(detail, index + 1);
+                  }),
+                const Divider(height: 32),
+                _buildSectionHeader(
+                  "Ringkasan Pembayaran",
+                  Icons.payment,
+                  Colors.orange,
+                ),
+                const SizedBox(height: 12),
+                _buildRow("Total Tagihan", formatRupiah(tagihan), isBold: true),
+                _buildRow("Total Dibayar", formatRupiah(totalDibayar)),
+                _buildRow(
+                  "Sisa Pembayaran",
+                  formatRupiah(sisa),
+                  color: sisa > 0 ? Colors.red : Colors.green,
+                  isBold: true,
+                ),
+                if (detailPembayarans.isNotEmpty) ...[
+                  const Divider(height: 32),
+                  _buildSectionHeader(
+                    "Bukti Pembayaran",
+                    Icons.receipt,
+                    Colors.green,
+                  ),
+                  const SizedBox(height: 12),
+                  ...detailPembayarans.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+                    return _buildPaymentProofCard(item, index + 1);
+                  }),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPerawatanDetail() {
+    final List detailPerawatans = data["detail_perawatans"] ?? [];
+
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        Card(
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader(
+                  "Informasi Perawatan",
+                  Icons.build,
+                  Colors.green,
+                ),
+                const SizedBox(height: 12),
+                _buildRow("Operator", data["operator"]?["nama"] ?? "-"),
+                _buildRow("ID Perawatan", "PERAWATAN-00${data['id']}"),
+                _buildRow("Tanggal Dibuat", formatDate(data["created_at"])),
+                const Divider(height: 32),
+                _buildSectionHeader(
+                  "Detail Perawatan",
+                  Icons.engineering,
+                  Colors.green,
+                ),
+                const SizedBox(height: 12),
+                if (detailPerawatans.isEmpty)
+                  const Text("Tidak ada detail perawatan.")
+                else
+                  ...detailPerawatans.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final detail = entry.value;
+                    return _buildPerawatanDetailCard(detail, index + 1);
+                  }),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrderDetailCard(Map<String, dynamic> detail, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
-            const SizedBox(height: 20),
-            ..._buildDetailContent(),
+            Text(
+              "Detail Order #$index",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildRow("Status", detail["status"] ?? "-"),
+            _buildRow("Alat", detail["alat"] ?? "-"),
+            _buildRow("Operator", detail["operator"] ?? "-"),
+            _buildRow("Alamat", detail["alamat"] ?? "-"),
+            _buildRow("Tanggal Mulai", formatDate(detail["tgl_mulai"])),
+            _buildRow("Jam Mulai", formatJam(detail["jam_mulai"])),
+            _buildRow("Tanggal Selesai", formatDate(detail["tgl_selesai"])),
+            _buildRow("Jam Selesai", formatJam(detail["jam_selesai"])),
+            _buildRow("Harga Sewa", formatRupiah(detail["harga_sewa"])),
+            _buildRow(
+              "Total Sewa",
+              formatRupiah(detail["total_sewa"]),
+              isBold: true,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Center(
-      child: Column(
-        children: [
-          Icon(
-            isOrder ? Icons.shopping_cart : Icons.build,
-            size: 60,
-            color: isOrder ? Colors.blue : Colors.green,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            isOrder
-                ? data["inventori_name"] ?? "-"
-                : data["inventori_name"] ?? "-",
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            isOrder
-                ? "Status: ${data['status_order']}"
-                : "Status: ${data['status_perawatan']}",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color:
-                  isOrder
-                      ? (data["status_order"] == "Selesai"
-                          ? Colors.green
-                          : Colors.orange)
-                      : (data["status_perawatan"] == "diproses"
-                          ? Colors.orange
-                          : Colors.green),
+  Widget _buildPerawatanDetailCard(Map<String, dynamic> detail, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Detail Perawatan #$index",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.green,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            _buildRow("Nama Alat", detail["alat"]?["nama"] ?? "-"),
+            _buildRow("Tanggal Mulai", formatDate(detail["tgl_mulai"])),
+            _buildRow("Tanggal Selesai", formatDate(detail["tgl_selesai"])),
+            _buildRow("Status", detail["status"] ?? "-"),
+            _buildRow("Catatan", detail["catatan"] ?? "Tidak ada catatan"),
+          ],
+        ),
       ),
     );
   }
 
-  List<Widget> _buildDetailContent() {
-    return isOrder
-        ? [
-          _buildDetailRow("ID Order", data["id"].toString()),
-          _buildDetailRow("Nama Pemesan", data["nama_pemesan"]),
-          _buildDetailRow("Jenis Alat", data["inventori_name"] ?? "-"),
-          _buildDetailRow("Order Sewa", "${data["total_sewa"]} Jam"),
-          _buildDetailRow("Pengiriman", formatDate(data["tgl_pemakaian"])),
-          _buildDetailRow("Operator", data["operator_name"] ?? "-"),
-          _buildDetailRow(
-            "Status Pembayaran",
-            data["status_pembayaran"],
-            color:
-                data["status_pembayaran"] == "lunas"
-                    ? Colors.green
-                    : Colors.orange,
-          ),
-          _buildDetailRow(
-            "Status Order",
-            data["status_order"],
-            color:
-                data["status_order"] == "Selesai"
-                    ? Colors.green
-                    : Colors.orange,
-          ),
-          _buildDetailRow("Jam Mulai", formatJam(data["jam_mulai"])),
-          _buildDetailRow("Jam Selesai", formatJam(data["jam_selesai"])),
-          _buildDetailRow(
-            "Jumlah Sewa",
-            (data["harga_sewa"] != null)
-                ? formatRupiah(parseDouble(data["harga_sewa"].toString()) ?? 0)
-                : "-",
-          ),
-          _buildDetailRow(
-            "Overtime",
-            (data["overtime"] != null)
-                ? "${formatOvertime(parseDouble(data["overtime"].toString()) ?? 0)} Jam"
-                : "-",
-          ),
-          _buildDetailRow(
-            "Denda",
-            (data["denda"] != null)
-                ? formatRupiah(parseDouble(data["denda"].toString()) ?? 0)
-                : "-",
-          ),
-          _buildDetailRow(
-            "Total Harga",
-            (data["total_harga"] != null)
-                ? formatRupiah(parseDouble(data["total_harga"].toString()) ?? 0)
-                : "-",
-          ),
-        ]
-        : [
-          _buildDetailRow("Perawatan ID", "#${data['id']}"),
-          _buildDetailRow("Nama Alat", data['inventori_name'] ?? "-"),
-          _buildDetailRow("Operator", data['operator_name'] ?? "-"),
-          _buildDetailRow("Tanggal Mulai", data['tanggal_mulai'] ?? "-"),
-          _buildDetailRow("Catatan", data['catatan'] ?? "-"),
-          _buildDetailRow(
-            "Status",
-            data['status_perawatan'] ?? "-",
-            color:
-                data['status_perawatan'] == "diproses"
-                    ? Colors.orange
-                    : Colors.green,
-          ),
-        ];
+  Widget _buildPaymentProofCard(Map<String, dynamic> item, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Pembayaran #$index",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Jumlah Dibayar: ${formatRupiah(item['jml_dibayar'])}",
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            if (item['bukti_pembayaran'] != null &&
+                item['bukti_pembayaran'].toString().isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  item['bukti_pembayaran'],
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (context, error, stackTrace) => Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                "Gagal memuat gambar",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                ),
+              )
+            else
+              Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: Text(
+                    "Tidak ada bukti pembayaran",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildDetailRow(String label, dynamic value, {Color? color}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
-      ),
+  Widget _buildRow(
+    String title,
+    String value, {
+    Color? color,
+    bool isBold = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            overflow: TextOverflow.ellipsis,
-          ),
           Expanded(
+            flex: 2,
             child: Text(
-              value?.toString() ?? "-",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color ?? Colors.black87,
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
-              textAlign: TextAlign.end,
+            ),
+          ),
+          const Text(": ", style: TextStyle(fontWeight: FontWeight.w600)),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color ?? Colors.black,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ),
         ],

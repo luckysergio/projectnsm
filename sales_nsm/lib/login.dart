@@ -28,16 +28,53 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _checkLoginStatus() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
-    if (!mounted) return;
-    if (token != null) {
-      // Jalankan polling saat sudah login sebelumnya
-      ref.read(orderServiceProvider);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const BerandaPage()),
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://192.168.1.101:8000/api/auth/check'),
+        headers: {'Authorization': 'Bearer $token'},
       );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ref.read(orderServiceProvider);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const BerandaPage()),
+        );
+      } else if (response.statusCode == 401) {
+        await prefs.remove('token');
+
+        if (!mounted) return;
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (_) => AlertDialog(
+                title: const Text('Sesi Habis'),
+                content: const Text(
+                  'Sesi login Anda telah habis. Silakan login kembali.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Token check failed: $e');
+      await prefs.remove('token');
     }
   }
 
@@ -49,7 +86,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _errorMessage = null;
     });
 
-    final Uri url = Uri.parse('http://192.168.1.104:8000/api/auth/login');
+    final Uri url = Uri.parse('http://192.168.1.101:8000/api/auth/login');
 
     try {
       final response = await http.post(
@@ -89,7 +126,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         await prefs.setInt('nik', int.parse(karyawan['nik'].toString()));
         await prefs.setString('name', karyawan['nama']);
 
-        // ⏱️ Jalankan polling saat login berhasil
         ref.read(orderServiceProvider);
 
         if (!mounted) return;

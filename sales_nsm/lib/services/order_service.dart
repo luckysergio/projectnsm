@@ -25,7 +25,7 @@ class OrderService {
     }
 
     final response = await http.get(
-      Uri.parse("http://192.168.1.104:8000/api/orders/active"),
+      Uri.parse("http://192.168.1.101:8000/api/orders/active"),
       headers: {"Authorization": "Bearer $token"},
     );
 
@@ -33,9 +33,6 @@ class OrderService {
       final data = jsonDecode(response.body);
       final count = data['count'] ?? 0;
       ref.read(orderCountProvider.notifier).state = count;
-    } else {
-      // print("❌ Gagal ambil data order: ${response.statusCode}");
-      // Untuk production gunakan logger jika perlu
-    }
+    } else {}
   }
 }

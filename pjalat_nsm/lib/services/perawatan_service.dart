@@ -25,7 +25,7 @@ class PerawatanService {
     }
 
     final response = await http.get(
-      Uri.parse("http://192.168.1.104:8000/api/Perawatans/active/public"),
+      Uri.parse("http://192.168.1.101:8000/api/perawatan/active/public"),
       headers: {"Authorization": "Bearer $token"},
     );
 
