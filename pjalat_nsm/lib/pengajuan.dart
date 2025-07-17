@@ -48,7 +48,7 @@ class _PengajuanPerawatanPageState extends State<PengajuanPerawatanPage> {
 
   Future<void> _fetchOperators() async {
     const String apiUrl =
-        "http://192.168.1.101:8000/api/karyawan/operator-maintenance";
+        "http://192.168.1.105:8000/api/karyawan/operator-maintenance";
     try {
       final response = await http.get(
         Uri.parse(apiUrl),
@@ -74,7 +74,7 @@ class _PengajuanPerawatanPageState extends State<PengajuanPerawatanPage> {
   }
 
   Future<void> _fetchAlatTersedia() async {
-    const String apiUrl = "http://192.168.1.101:8000/api/inventory-tersedia";
+    const String apiUrl = "http://192.168.1.105:8000/api/inventory-tersedia";
     try {
       final response = await http.get(
         Uri.parse(apiUrl),
@@ -124,7 +124,7 @@ class _PengajuanPerawatanPageState extends State<PengajuanPerawatanPage> {
           }).toList();
 
       final response = await http.post(
-        Uri.parse("http://192.168.1.101:8000/api/perawatan"),
+        Uri.parse("http://192.168.1.105:8000/api/perawatan"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $_token",

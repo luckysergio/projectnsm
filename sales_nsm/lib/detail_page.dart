@@ -112,7 +112,7 @@ class DetailPage extends StatelessWidget {
                         ),
                         _buildRow(
                           "Total Sewa",
-                          formatRupiah(detail["total_sewa"]),
+                          "${detail["total_sewa"] ?? '-'} jam",
                         ),
                         const Divider(),
                       ],

@@ -34,7 +34,7 @@ class _HistoriPerawatanPageState extends State<HistoriPerawatanPage> {
       if (token == null) throw Exception("Token tidak ditemukan");
 
       final response = await http.get(
-        Uri.parse("http://192.168.1.101:8000/api/perawatan/selesai"),
+        Uri.parse("http://192.168.1.105:8000/api/perawatan/selesai"),
         headers: {'Authorization': 'Bearer $token'},
       );
 

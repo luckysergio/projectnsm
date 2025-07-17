@@ -39,14 +39,16 @@ class DetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(
           isOrder ? "SEWA-00${data['id']}" : "PERAWATAN-00${data['id']}",
         ),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: Colors.grey[100],
+        shadowColor: Colors.transparent,
         scrolledUnderElevation: 0,
-        backgroundColor: isOrder ? Colors.blue[50] : Colors.green[50],
       ),
       body: isOrder ? _buildOrderDetail() : _buildPerawatanDetail(),
     );
@@ -234,7 +236,7 @@ class DetailPage extends StatelessWidget {
             _buildRow("Harga Sewa", formatRupiah(detail["harga_sewa"])),
             _buildRow(
               "Total Sewa",
-              formatRupiah(detail["total_sewa"]),
+              "${detail["total_sewa"] ?? '-'} jam",
               isBold: true,
             ),
           ],

@@ -51,7 +51,7 @@ class _SearchPageState extends State<SearchPage> {
       _isSearching = true;
     });
 
-    const String orderApiUrl = "http://192.168.1.101:8000/api/orders/all";
+    const String orderApiUrl = "http://192.168.1.105:8000/api/orders/all";
 
     try {
       final response = await http.get(

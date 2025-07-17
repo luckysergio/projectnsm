@@ -26,7 +26,7 @@ class _HistoriOrderPageState extends State<HistoriOrderPage> {
     if (token == null) throw Exception("Token tidak ditemukan.");
 
     final response = await http.get(
-      Uri.parse("http://192.168.1.101:8000/api/orders/completed"),
+      Uri.parse("http://192.168.1.105:8000/api/orders/completed"),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -215,10 +215,7 @@ class DetailOrderPage extends StatelessWidget {
                           "Harga Sewa",
                           formatRupiah(detail["harga_sewa"] ?? 0),
                         ),
-                        _buildRow(
-                          "Total Sewa",
-                          detail["total_sewa"].toString(),
-                        ),
+                        _buildRow("Total Sewa", '${detail["total_sewa"]} jam'),
                         const Divider(),
                       ],
                     );

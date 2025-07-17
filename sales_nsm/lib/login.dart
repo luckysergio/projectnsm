@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:sales_nsm/providers/jwt_token_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sales_nsm/home.dart';
 import 'package:sales_nsm/providers/order_service_provider.dart';
@@ -35,7 +36,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.101:8000/api/auth/check'),
+        Uri.parse('http://192.168.1.105:8000/api/auth/check'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -86,7 +87,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _errorMessage = null;
     });
 
-    final Uri url = Uri.parse('http://192.168.1.101:8000/api/auth/login');
+    final Uri url = Uri.parse('http://192.168.1.105:8000/api/auth/login');
 
     try {
       final response = await http.post(
@@ -126,6 +127,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         await prefs.setInt('nik', int.parse(karyawan['nik'].toString()));
         await prefs.setString('name', karyawan['nama']);
 
+        ref.invalidate(jwtTokenProvider);
         ref.read(orderServiceProvider);
 
         if (!mounted) return;

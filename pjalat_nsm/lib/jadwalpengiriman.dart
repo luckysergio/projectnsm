@@ -24,13 +24,25 @@ class _JadwalPengirimanPageState extends State<JadwalPengirimanPage> {
   Future<List<Map<String, dynamic>>> _fetchOrders() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
+    final jabatan = prefs.getString('jabatan')?.toLowerCase() ?? '';
+    final idKaryawan = prefs.getInt('id_karyawan');
 
     if (_token == null) {
       throw Exception("Token tidak ditemukan, silakan login kembali.");
     }
 
+    Uri url;
+
+    if (jabatan == 'operator alat') {
+      url = Uri.parse(
+        "http://192.168.1.105:8000/api/orders/active/operator/$idKaryawan",
+      );
+    } else {
+      url = Uri.parse("http://192.168.1.105:8000/api/orders/active/public");
+    }
+
     final response = await http.get(
-      Uri.parse("http://192.168.1.101:8000/api/orders/active/public"),
+      url,
       headers: {"Authorization": "Bearer $_token"},
     );
 
@@ -131,6 +143,21 @@ class DetailPengirimanPage extends StatefulWidget {
 }
 
 class _DetailPengirimanPageState extends State<DetailPengirimanPage> {
+  String? _jabatan;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadJabatan();
+  }
+
+  Future<void> _loadJabatan() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _jabatan = prefs.getString('jabatan')?.toLowerCase();
+    });
+  }
+
   String formatDate(String? date) {
     if (date == null || date.isEmpty) return "-";
     try {
@@ -169,7 +196,7 @@ class _DetailPengirimanPageState extends State<DetailPengirimanPage> {
       if (token == null) throw Exception("Token tidak ditemukan.");
 
       final response = await http.get(
-        Uri.parse("http://192.168.1.101:8000/api/karyawan/operator-alat"),
+        Uri.parse("http://192.168.1.105:8000/api/karyawan/operator-alat"),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -231,7 +258,7 @@ class _DetailPengirimanPageState extends State<DetailPengirimanPage> {
 
       final response = await http.put(
         Uri.parse(
-          "http://192.168.1.101:8000/api/detail-order/${detailOrder['id']}",
+          "http://192.168.1.105:8000/api/detail-order/${detailOrder['id']}",
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -408,7 +435,7 @@ class _DetailPengirimanPageState extends State<DetailPengirimanPage> {
                               detailOrders[i]["alamat"] ?? "-",
                             ),
                             _buildRow(
-                              "Tanggal",
+                              "Tanggal kirim",
                               formatDate(detailOrders[i]["tgl_mulai"]),
                             ),
                             _buildRow(
@@ -420,8 +447,10 @@ class _DetailPengirimanPageState extends State<DetailPengirimanPage> {
                               formatJam(detailOrders[i]["jam_selesai"]),
                             ),
                             _buildRow(
-                              "Total jam sewa",
-                              detailOrders[i]["total_sewa"]?.toString() ?? "-",
+                              "Total sewa",
+                              detailOrders[i]["total_sewa"] != null
+                                  ? "${detailOrders[i]["total_sewa"]} jam"
+                                  : "-",
                             ),
                             _buildRow(
                               "Harga",
@@ -441,28 +470,31 @@ class _DetailPengirimanPageState extends State<DetailPengirimanPage> {
                                 detailOrders[i]["catatan"] ?? "-",
                               ),
                             const SizedBox(height: 12),
-                            Center(
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.edit, size: 18),
-                                label: const Text("Proses Detail"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed:
-                                    () => prosesDetailOrder(
-                                      context,
-                                      detailOrders[i],
+                            if (_jabatan == "penanggung jawab alat")
+                              Center(
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  label: const Text("Proses Detail"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
                                     ),
-                              ),
-                            ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed:
+                                      () => prosesDetailOrder(
+                                        context,
+                                        detailOrders[i],
+                                      ),
+                                ),
+                              )
+                            else
+                              const SizedBox.shrink(),
                           ],
                         ),
                       ),
@@ -519,6 +551,7 @@ class _ProcessDetailOrderDialogState extends State<ProcessDetailOrderDialog> {
   String _selectedStatus = 'proses';
   String? _selectedOperator;
   final TextEditingController _catatanController = TextEditingController();
+  bool _isLoading = false;
 
   final List<Map<String, String>> _statusOptions = [
     {'value': 'pending', 'label': 'Pending'},
@@ -646,27 +679,47 @@ class _ProcessDetailOrderDialogState extends State<ProcessDetailOrderDialog> {
           child: const Text("Batal"),
         ),
         ElevatedButton(
-          onPressed: () async {
-            if (_selectedOperator == null) {
-              if (!mounted) return;
+          onPressed:
+              _isLoading
+                  ? null
+                  : () async {
+                    if (_selectedOperator == null) {
+                      if (!mounted) return;
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Silakan pilih operator")),
-              );
-              return;
-            }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Silakan pilih operator")),
+                      );
+                      return;
+                    }
 
-            Navigator.pop(context, {
-              'status': _selectedStatus,
-              'id_operator': int.parse(_selectedOperator!),
-              'catatan': _catatanController.text.trim(),
-            });
-          },
+                    setState(() {
+                      _isLoading = true;
+                    });
+                    await Future.delayed(Duration(milliseconds: 300));
+
+                    if (!context.mounted) return;
+
+                    Navigator.pop(context, {
+                      'status': _selectedStatus,
+                      'id_operator': int.parse(_selectedOperator!),
+                      'catatan': _catatanController.text.trim(),
+                    });
+                  },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
           ),
-          child: const Text("Proses"),
+          child:
+              _isLoading
+                  ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                  : const Text("Proses"),
         ),
       ],
     );

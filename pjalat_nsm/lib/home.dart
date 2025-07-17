@@ -80,12 +80,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 class HomeScreenState extends ConsumerState<HomeScreen> {
   String _namaPjalat = "Nama Penanggung jawab alat";
   String _nikPjalat = "Nomer Induk Karyawan";
+  String? _jabatan;
 
   @override
   void initState() {
     super.initState();
     checkTokenValidity(context);
     _loadUserData();
+    _loadJabatan();
     ref.read(orderServiceProvider);
     ref.read(perawatanServiceProvider);
   }
@@ -98,7 +100,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.101:8000/api/auth/check'),
+        Uri.parse('http://192.168.1.105:8000/api/auth/check'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -133,6 +135,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     } catch (e) {
       debugPrint('Token check error: $e');
     }
+  }
+
+  Future<void> _loadJabatan() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _jabatan = prefs.getString('jabatan')?.toLowerCase();
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -437,63 +446,77 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildCategoryButtons() {
+    if (_jabatan == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Column(
       children: [
-        Consumer(
-          builder: (context, ref, child) {
-            final jumlahOrderAktif = ref.watch(orderCountProvider);
-            return _buildCategoryButton(
-              "Jadwal Pengiriman Alat",
-              Icons.local_shipping,
-              Colors.blue,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const JadwalPengirimanPage(),
-                  ),
-                );
-              },
-              badgeCount: jumlahOrderAktif,
-            );
-          },
-        ),
-        Consumer(
-          builder: (context, ref, child) {
-            final jumlahPerawatan = ref.watch(perawatanCountProvider);
-            return _buildCategoryButton(
-              "Jadwal Perawatan Alat",
-              Icons.list_alt,
-              Colors.green,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const JadwalPerrawatanPage(),
-                  ),
-                );
-              },
-              badgeCount: jumlahPerawatan,
-            );
-          },
-        ),
-        _buildCategoryButton(
-          "Buat jadwal Perawatan Alat",
-          Icons.build,
-          Colors.orange,
-          () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const PengajuanPerawatanPage(),
-              ),
-            );
+        if (_jabatan == 'penanggung jawab alat' ||
+            _jabatan == 'operator alat') ...[
+          Consumer(
+            builder: (context, ref, child) {
+              final jumlahOrderAktif = ref.watch(orderCountProvider);
+              return _buildCategoryButton(
+                "Jadwal Pengiriman Alat",
+                Icons.local_shipping,
+                Colors.blue,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const JadwalPengirimanPage(),
+                    ),
+                  );
+                },
+                badgeCount: jumlahOrderAktif,
+              );
+            },
+          ),
+        ],
 
-            if (result == true) {
-              await ref.read(perawatanServiceProvider).fetchPerawatanCount();
-            }
-          },
-        ),
+        if (_jabatan == 'penanggung jawab alat' ||
+            _jabatan == 'operator maintenance') ...[
+          Consumer(
+            builder: (context, ref, child) {
+              final jumlahPerawatan = ref.watch(perawatanCountProvider);
+              return _buildCategoryButton(
+                "Jadwal Perawatan Alat",
+                Icons.list_alt,
+                Colors.green,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const JadwalPerrawatanPage(),
+                    ),
+                  );
+                },
+                badgeCount: jumlahPerawatan,
+              );
+            },
+          ),
+        ],
+
+        if (_jabatan == 'penanggung jawab alat') ...[
+          _buildCategoryButton(
+            "Buat jadwal Perawatan Alat",
+            Icons.build,
+            Colors.orange,
+            () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PengajuanPerawatanPage(),
+                ),
+              );
+
+              if (result == true) {
+                await ref.read(perawatanServiceProvider).fetchPerawatanCount();
+              }
+            },
+          ),
+        ],
       ],
     );
   }

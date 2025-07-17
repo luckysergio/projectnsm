@@ -94,7 +94,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.101:8000/api/auth/check'),
+        Uri.parse('http://192.168.1.105:8000/api/auth/check'),
         headers: {'Authorization': 'Bearer $token'},
       );
 

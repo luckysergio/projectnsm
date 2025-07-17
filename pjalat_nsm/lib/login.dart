@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:pjalat_nsm/home.dart';
+import 'package:pjalat_nsm/providers/jwt_token_provider.dart';
 import 'package:pjalat_nsm/providers/order_service_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,7 +38,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.101:8000/api/auth/check'),
+        Uri.parse('http://192.168.1.105:8000/api/auth/check'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -90,7 +91,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _errorMessage = null;
     });
 
-    final Uri url = Uri.parse('http://192.168.1.101:8000/api/auth/login');
+    final Uri url = Uri.parse('http://192.168.1.105:8000/api/auth/login');
 
     try {
       final response = await http.post(
@@ -118,10 +119,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         final role = karyawan['role'];
         final jabatan = role?['jabatan']?.toLowerCase() ?? '';
 
-        if (jabatan != 'penanggung jawab alat') {
+        final allowedRoles = [
+          'penanggung jawab alat',
+          'operator alat',
+          'operator maintenance',
+        ];
+
+        if (!allowedRoles.contains(jabatan)) {
           setState(() {
             _errorMessage =
-                'Hanya role penanggung jawab alat yang diizinkan login.';
+                'Hanya role penanggung jawab alat, operator alat, dan operator maintenance yang diizinkan login.';
           });
           return;
         }
@@ -130,8 +137,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         await prefs.setString('token', responseData['token']);
         await prefs.setInt('nik', int.parse(karyawan['nik'].toString()));
         await prefs.setString('name', karyawan['nama']);
+        await prefs.setString('jabatan', user['karyawan']['role']['jabatan']);
+        await prefs.setInt('id_karyawan', user['karyawan']['id']);
 
+        ref.invalidate(jwtTokenProvider);
         ref.read(orderServiceProvider);
+        ref.read(perawatanServiceProvider);
 
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(

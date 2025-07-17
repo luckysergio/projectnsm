@@ -1,17 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login.dart';
+import 'package:sales_nsm/login.dart';
+import 'package:sales_nsm/providers/jwt_token_provider.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  ProfilePageState createState() => ProfilePageState();
+  ConsumerState<ProfilePage> createState() => ProfilePageState();
 }
 
-class ProfilePageState extends State<ProfilePage> {
+class ProfilePageState extends ConsumerState<ProfilePage> {
   String? nama;
   String? nik;
   String? email;
@@ -55,7 +57,7 @@ class ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchProfile() async {
-    const String apiUrl = "http://192.168.1.101:8000/api/auth/me";
+    const String apiUrl = "http://192.168.1.105:8000/api/auth/me";
 
     try {
       final response = await http.get(
@@ -84,7 +86,7 @@ class ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchCompletedOrdersCount() async {
-    const String apiUrl = "http://192.168.1.101:8000/api/orders/completed";
+    const String apiUrl = "http://192.168.1.105:8000/api/orders/completed";
 
     try {
       final response = await http.get(
@@ -123,7 +125,7 @@ class ProfilePageState extends State<ProfilePage> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.1.101:8000/api/auth/change-password"),
+        Uri.parse("http://192.168.1.105:8000/api/auth/change-password"),
         headers: {
           "Authorization": "Bearer $token",
           "Accept": "application/json",
@@ -157,18 +159,20 @@ class ProfilePageState extends State<ProfilePage> {
     final storedToken = prefs.getString('token');
 
     if (storedToken == null) {
+      ref.invalidate(jwtTokenProvider);
       _navigateToLogin();
       return;
     }
 
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.1.101:8000/api/auth/logout"),
+        Uri.parse("http://192.168.1.105:8000/api/auth/logout"),
         headers: {"Authorization": "Bearer $storedToken"},
       );
 
       if (response.statusCode == 200) {
         await prefs.clear();
+        ref.invalidate(jwtTokenProvider);
         _navigateToLogin();
       } else {
         showErrorDialog("Gagal logout, coba lagi.");
@@ -226,8 +230,8 @@ class ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         title: const Text("Profil Karyawan"),
         centerTitle: true,
-        elevation: 0,
         backgroundColor: Colors.grey[100],
+        elevation: 0,
         shadowColor: Colors.transparent,
         scrolledUnderElevation: 0,
       ),
@@ -264,22 +268,10 @@ class ProfilePageState extends State<ProfilePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(50),
-                  blurRadius: 8,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: const CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 50, color: Colors.blueAccent),
-            ),
+          const CircleAvatar(
+            radius: 40,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.person, size: 50, color: Colors.blueAccent),
           ),
           const SizedBox(width: 16),
           Column(

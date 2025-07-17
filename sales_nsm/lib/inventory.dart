@@ -16,7 +16,7 @@ class _InventoryPageState extends State<InventoryPage> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _inventoryList = [];
 
-  final String apiBaseUrl = "http://192.168.1.101:8000/api/inventory";
+  final String apiBaseUrl = "http://192.168.1.105:8000/api/inventory";
 
   final List<Map<String, String>> pompaCategories = const [
     {

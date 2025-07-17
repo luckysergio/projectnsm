@@ -24,13 +24,27 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
   Future<List<Map<String, dynamic>>> _fetchPerawatans() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
+    final jabatan = prefs.getString('jabatan')?.toLowerCase();
+    final idKaryawan = prefs.getInt('id_karyawan');
 
     if (_token == null) {
-      throw Exception("Token tidak ditemukan, silakan login kembali.");
+      if (!mounted) return [];
+      _showDialog("Error", "Token tidak ditemukan, silakan login kembali.");
+      return [];
+    }
+
+    Uri url;
+
+    if (jabatan == 'operator maintenance' && idKaryawan != null) {
+      url = Uri.parse(
+        "http://192.168.1.105:8000/api/perawatan/active/operator/$idKaryawan",
+      );
+    } else {
+      url = Uri.parse("http://192.168.1.105:8000/api/perawatan/active/public");
     }
 
     final response = await http.get(
-      Uri.parse("http://192.168.1.101:8000/api/perawatan/active/public"),
+      url,
       headers: {"Authorization": "Bearer $_token"},
     );
 
@@ -38,8 +52,30 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
       final data = jsonDecode(response.body);
       return List<Map<String, dynamic>>.from(data["perawatans"]);
     } else {
-      throw Exception("Gagal mengambil data perawatan.");
+      if (!mounted) return [];
+      _showDialog("Error", "Gagal mengambil data perawatan.");
+      return [];
     }
+  }
+
+  void _showDialog(String title, String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                ),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -49,9 +85,8 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
       appBar: AppBar(
         title: const Text("Jadwal Perawatan Alat"),
         centerTitle: true,
-        elevation: 0,
         backgroundColor: Colors.grey[100],
-        shadowColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -63,9 +98,7 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
             } else if (snapshot.hasError) {
               return Center(child: Text("Error: ${snapshot.error}"));
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
-                child: Text("Tidak ada jadwal perawatan tersedia."),
-              );
+              return const Center(child: Text("Tidak ada jadwal perawatan."));
             }
 
             final perawatans = snapshot.data!;
@@ -81,9 +114,9 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: const Icon(
-                      Icons.build_circle_outlined,
-                      color: Colors.green,
+                      Icons.build_circle,
                       size: 40,
+                      color: Colors.green,
                     ),
                     title: Text(
                       "Perawatan-00${perawatan['id']}",
@@ -92,11 +125,7 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
                     subtitle: Text(
                       "Operator: ${perawatan["operator"]?["nama"] ?? "-"}",
                     ),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 18,
-                      color: Colors.green,
-                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                     onTap: () async {
                       final result = await Navigator.push(
                         context,
@@ -105,9 +134,15 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
                               (context) => DetailPerawatanPage(
                                 perawatan: perawatan,
                                 token: _token!,
+                                onReload: () {
+                                  setState(() {
+                                    _perawatanFuture = _fetchPerawatans();
+                                  });
+                                },
                               ),
                         ),
                       );
+
                       if (result == true) {
                         setState(() {
                           _perawatanFuture = _fetchPerawatans();
@@ -125,15 +160,37 @@ class JadwalPerrawatanPageState extends State<JadwalPerrawatanPage> {
   }
 }
 
-class DetailPerawatanPage extends StatelessWidget {
+class DetailPerawatanPage extends StatefulWidget {
   final Map<String, dynamic> perawatan;
   final String token;
+  final VoidCallback onReload;
 
   const DetailPerawatanPage({
     super.key,
     required this.perawatan,
     required this.token,
+    required this.onReload,
   });
+
+  @override
+  State<DetailPerawatanPage> createState() => _DetailPerrawatanPageState();
+}
+
+class _DetailPerrawatanPageState extends State<DetailPerawatanPage> {
+  String? _jabatan;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadJabatan();
+  }
+
+  Future<void> _loadJabatan() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _jabatan = prefs.getString('jabatan')?.toLowerCase();
+    });
+  }
 
   String formatDate(String? date) {
     if (date == null || date.isEmpty) return "-";
@@ -144,69 +201,64 @@ class DetailPerawatanPage extends StatelessWidget {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchOperatorMaintenance() async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-          "http://192.168.1.101:8000/api/karyawan/operator-maintenance",
-        ),
-        headers: {"Authorization": "Bearer $token"},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return List<Map<String, dynamic>>.from(data["operators"] ?? []);
-      } else {
-        throw Exception("Gagal mengambil data operator maintenance");
-      }
-    } catch (e) {
-      throw Exception("Error: $e");
-    }
-  }
-
-  void _showSuccessDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showDialog(
+    BuildContext context,
+    String title,
+    String message,
+  ) async {
+    await showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: const Text("Sukses"),
-            content: const Text("Perawatan berhasil diproses"),
+          (_) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
             actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context, true);
-                },
-                child: const Text("OK"),
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                ),
               ),
             ],
           ),
     );
   }
 
+  Future<List<Map<String, dynamic>>> _fetchOperatorMaintenance() async {
+    final response = await http.get(
+      Uri.parse("http://192.168.1.105:8000/api/karyawan/operator-maintenance"),
+      headers: {"Authorization": "Bearer ${widget.token}"},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return List<Map<String, dynamic>>.from(data["operators"] ?? []);
+    } else {
+      throw Exception("Gagal mengambil data operator");
+    }
+  }
+
   void _showProsesDialog(BuildContext context) async {
     final TextEditingController catatanController = TextEditingController();
     String selectedStatus =
-        perawatan['detail_perawatans']?[0]['status'] ?? "selesai";
+        widget.perawatan['detail_perawatans']?[0]['status'] ?? "selesai";
     DateTime selectedDate = DateTime.now();
-    int? selectedOperatorId = perawatan['operator']?['id'];
+    int? selectedOperatorId = widget.perawatan['operator']?['id'];
 
     List<Map<String, dynamic>> operators = [];
-
     try {
       operators = await _fetchOperatorMaintenance();
       if (selectedOperatorId != null &&
           !operators.any((op) => op['id'] == selectedOperatorId)) {
         operators.add({
           'id': selectedOperatorId,
-          'nama': perawatan['operator']?['nama'] ?? 'Unknown',
+          'nama': widget.perawatan['operator']?['nama'] ?? 'Unknown',
         });
       }
     } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Gagal memuat data operator: $e")));
+      if (context.mounted) {
+        _showDialog(context, "Error", "Gagal memuat operator: $e");
+      }
       return;
     }
 
@@ -221,7 +273,6 @@ class DetailPerawatanPage extends StatelessWidget {
                   title: const Text("Proses Perawatan"),
                   content: SingleChildScrollView(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         DropdownButtonFormField<int>(
                           value: selectedOperatorId,
@@ -318,19 +369,30 @@ class DetailPerawatanPage extends StatelessWidget {
                       child: const Text("Simpan"),
                       onPressed: () async {
                         if (selectedOperatorId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Pilih operator terlebih dahulu"),
-                            ),
+                          _showDialog(
+                            context,
+                            "Peringatan",
+                            "Pilih operator terlebih dahulu",
                           );
                           return;
                         }
 
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder:
+                              (_) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                        );
+
                         try {
-                          final List detailPerawatans =
-                              perawatan['detail_perawatans'] ?? [];
-                          final List<Map<String, dynamic>> details =
-                              detailPerawatans.map((detail) {
+                          final detailPerawatans =
+                              widget.perawatan['detail_perawatans'] ?? [];
+                          final details =
+                              detailPerawatans.map<Map<String, dynamic>>((
+                                detail,
+                              ) {
                                 return {
                                   "id_alat": detail['id_alat'],
                                   "tgl_mulai": detail['tgl_mulai'],
@@ -355,10 +417,10 @@ class DetailPerawatanPage extends StatelessWidget {
 
                           final response = await http.put(
                             Uri.parse(
-                              "http://192.168.1.101:8000/api/perawatan/${perawatan['id']}",
+                              "http://192.168.1.105:8000/api/perawatan/${widget.perawatan['id']}",
                             ),
                             headers: {
-                              "Authorization": "Bearer $token",
+                              "Authorization": "Bearer ${widget.token}",
                               "Content-Type": "application/json",
                               "Accept": "application/json",
                             },
@@ -366,31 +428,48 @@ class DetailPerawatanPage extends StatelessWidget {
                           );
 
                           if (!context.mounted) return;
+                          Navigator.of(context, rootNavigator: true).pop();
 
                           if (response.statusCode == 200) {
                             Navigator.pop(context);
-                            _showSuccessDialog(context);
+
+                            await showDialog(
+                              context: context,
+                              builder:
+                                  (context) => AlertDialog(
+                                    title: const Text("Sukses"),
+                                    content: const Text(
+                                      "Detail perawatan berhasil diproses.",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                          Navigator.pop(context, true);
+                                        },
+                                        child: const Text("OK"),
+                                      ),
+                                    ],
+                                  ),
+                            );
                           } else {
                             final errorData = jsonDecode(response.body);
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  errorData['message'] ??
-                                      "Gagal memproses perawatan",
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
+                            _showDialog(
+                              context,
+                              "Error",
+                              errorData['message'] ?? "Gagal memproses",
                             );
                           }
                         } catch (e) {
                           if (!context.mounted) return;
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Error: $e"),
-                              backgroundColor: Colors.red,
-                            ),
+                          Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(); // Tutup loading dialog
+                          _showDialog(
+                            context,
+                            "Error",
+                            "Terjadi kesalahan: $e",
                           );
                         }
                       },
@@ -403,17 +482,15 @@ class DetailPerawatanPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List detailPerawatans = perawatan["detail_perawatans"] ?? [];
+    final List detailPerawatans = widget.perawatan["detail_perawatans"] ?? [];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Perawatan-00${perawatan['id']}"),
+        title: Text("Perawatan-00${widget.perawatan['id']}"),
         centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         children: [
           Card(
             elevation: 3,
@@ -421,11 +498,13 @@ class DetailPerawatanPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildRow("Operator", perawatan["operator"]?["nama"] ?? "-"),
+                  _buildRow(
+                    "Operator",
+                    widget.perawatan["operator"]?["nama"] ?? "-",
+                  ),
                   const Divider(),
                   for (var d in detailPerawatans) ...[
                     Center(
@@ -445,24 +524,24 @@ class DetailPerawatanPage extends StatelessWidget {
                     const Divider(),
                   ],
                   const SizedBox(height: 20),
-                  Center(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.build),
-                      label: const Text("Proses Perawatan"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                  _jabatan == "penanggung jawab alat"
+                      ? ElevatedButton.icon(
+                        icon: const Icon(Icons.build),
+                        label: const Text("Proses Perawatan"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () => _showProsesDialog(context),
-                    ),
-                  ),
+                        onPressed: () => _showProsesDialog(context),
+                      )
+                      : const SizedBox.shrink(),
                 ],
               ),
             ),

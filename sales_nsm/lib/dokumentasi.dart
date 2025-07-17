@@ -42,7 +42,7 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
   }
 
   Future<void> _fetchPendingOrders() async {
-    const String apiUrl = "http://192.168.1.101:8000/api/orders/active";
+    const String apiUrl = "http://192.168.1.105:8000/api/orders/active";
 
     try {
       final response = await http.get(
@@ -107,7 +107,7 @@ class _DokumentasiOrderPageState extends State<DokumentasiOrderPage> {
     }
 
     setState(() => _isUploading = true);
-    const String apiUrl = "http://192.168.1.101:8000/api/dokumentasi";
+    const String apiUrl = "http://192.168.1.105:8000/api/dokumentasi";
 
     try {
       var request = http.MultipartRequest('POST', Uri.parse(apiUrl));

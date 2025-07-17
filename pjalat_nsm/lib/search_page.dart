@@ -53,7 +53,7 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _fetchOrders(String query) async {
     const String orderApiUrl =
-        "http://192.168.1.101:8000/api/orders/all/public";
+        "http://192.168.1.105:8000/api/orders/all/public";
 
     try {
       final response = await http.get(
@@ -87,7 +87,7 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _fetchPerawatans(String query) async {
     const String perawatanApiUrl =
-        "http://192.168.1.101:8000/api/perawatan/all";
+        "http://192.168.1.105:8000/api/perawatan/all";
 
     try {
       final response = await http.get(
