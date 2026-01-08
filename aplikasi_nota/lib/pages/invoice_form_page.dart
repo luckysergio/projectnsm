@@ -62,20 +62,17 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     });
   }
 
-  // Helper: format angka ke Rupiah (untuk tampilan)
   String formatRupiah(double value) {
     if (value == 0) return 'Rp 0';
     final formatter = NumberFormat('#,##0', 'id_ID');
     return 'Rp ${formatter.format(value)}';
   }
 
-  // Helper: ekstrak angka dari string input
   double parsePrice(String raw) {
     final clean = raw.replaceAll(RegExp(r'[^\d]'), '');
     return double.tryParse(clean) ?? 0;
   }
 
-  // Simpan data terbaru dari controller ke item sebelum simpan/preview
   void syncItemsFromControllers() {
     for (int i = 0; i < items.length; i++) {
       final rawText = priceControllers[i].text;
@@ -190,7 +187,6 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                 ),
               );
             }),
-
             const SizedBox(height: 24),
             const Text(
               'Item Nota',
@@ -236,7 +232,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                                   Expanded(
                                     child: TextFormField(
                                       initialValue: item.productName,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         hintText: 'Nama item',
                                         border: InputBorder.none,
                                         contentPadding: EdgeInsets.zero,
@@ -279,14 +275,11 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                                       onChanged: (v) {
                                         final qty = int.tryParse(v) ?? 0;
                                         item.qty = qty;
-                                        // Hitung ulang subtotal real-time
                                         final price = parsePrice(
                                           priceCtrl.text,
                                         );
                                         item.subtotal = qty * price;
-                                        setState(
-                                          () {},
-                                        ); // Trigger rebuild untuk subtotal & total
+                                        setState(() {});
                                       },
                                     ),
                                   ),
@@ -342,16 +335,12 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                                         FilteringTextInputFormatter.digitsOnly,
                                       ],
                                       onChanged: (rawInput) {
-                                        // Update harga internal (tanpa format)
                                         final price = parsePrice(rawInput);
                                         item.price = price;
-                                        // Hitung ulang subtotal
                                         item.subtotal = item.qty * price;
-                                        // Trigger UI update
                                         setState(() {});
                                       },
                                       onTapOutside: (_) {
-                                        // Format saat keluar fokus
                                         final raw = priceCtrl.text.replaceAll(
                                           RegExp(r'[^\d]'),
                                           '',
@@ -400,7 +389,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+                border: Border.all(color: Colors.blueAccent.withAlpha(77)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

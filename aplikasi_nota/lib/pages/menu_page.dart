@@ -1,4 +1,5 @@
 import 'package:aplikasi_nota/pages/company_profile_page.dart';
+import 'package:aplikasi_nota/pages/invoice_list_page.dart';
 import 'package:flutter/material.dart';
 import 'invoice_form_page.dart';
 
@@ -30,16 +31,24 @@ class MenuPage extends StatelessWidget {
               icon: Icons.list_alt,
               title: 'Daftar Nota',
               onTap: () {
-                // nanti kita isi
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const InvoiceListPage()),
+                );
               },
             ),
             _MenuCard(
               icon: Icons.print,
               title: 'Cetak Nota',
               onTap: () {
-                // nanti ke PDF
+                // Bisa langsung pilih nota terbaru atau tampilkan dialog pilih
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const InvoiceListPage()),
+                );
               },
             ),
+
             _MenuCard(
               icon: Icons.business,
               title: 'Profil Perusahaan',

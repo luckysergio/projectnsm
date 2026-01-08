@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/invoice.dart';
 import '../repositories/invoice_repository.dart';
-import 'invoice_preview_page.dart';
+import 'invoice_pdf_page.dart'; // pastikan InvoicePdfPage menerima invoice & items
 
 class InvoiceListPage extends StatefulWidget {
   const InvoiceListPage({super.key});
@@ -11,89 +11,114 @@ class InvoiceListPage extends StatefulWidget {
 }
 
 class _InvoiceListPageState extends State<InvoiceListPage> {
-  final repo = InvoiceRepository();
-  late Future<List<Invoice>> invoicesFuture;
+  List<Invoice> invoices = [];
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    invoicesFuture = repo.getAllInvoices();
+    loadInvoices();
   }
 
-  void refresh() {
-    setState(() {
-      invoicesFuture = repo.getAllInvoices();
-    });
+  Future<void> loadInvoices() async {
+    setState(() => loading = true);
+    final repo = InvoiceRepository();
+    invoices = await repo.getInvoices(); // ambil data dari database
+    setState(() => loading = false);
+  }
+
+  // Format tanggal: "01 Januari 2026"
+  String formatTanggal(String isoDate) {
+    final months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    try {
+      final date = DateTime.parse(isoDate);
+      final day = date.day.toString().padLeft(2, '0');
+      final month = months[date.month - 1];
+      final year = date.year;
+      return '$day $month $year';
+    } catch (_) {
+      return isoDate;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Daftar Nota')),
-      body: FutureBuilder<List<Invoice>>(
-        future: invoicesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Belum ada nota'));
-          }
-
-          final invoices = snapshot.data!;
-
-          return ListView.builder(
-            itemCount: invoices.length,
-            itemBuilder: (context, index) {
-              final invoice = invoices[index];
-
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: ListTile(
-                  leading: const Icon(Icons.receipt_long),
-                  title: Text('Nota #${invoice.invoiceNumber}'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(invoice.customerName),
-                      Text('Tanggal: ${invoice.invoiceDate}'),
-                      Text(
-                        'Total: Rp ${invoice.total.toStringAsFixed(0)}',
+      appBar: AppBar(title: const Text('Daftar Nota'), centerTitle: true),
+      body:
+          loading
+              ? const Center(child: CircularProgressIndicator())
+              : invoices.isEmpty
+              ? const Center(child: Text('Belum ada nota'))
+              : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: invoices.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final invoice = invoices[index];
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue.shade100,
+                        child: Text('${index + 1}'),
+                      ),
+                      title: Text(
+                        invoice.customerName,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.picture_as_pdf),
-                        onPressed: () {
+                      subtitle: Text(
+                        'No Nota: ${invoice.invoiceNumber}\nTanggal: ${formatTanggal(invoice.invoiceDate)}',
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.print, color: Colors.blue),
+                        onPressed: () async {
+                          if (invoice.id == null) return;
+
+                          // Ambil items untuk invoice ini
+                          final repo = InvoiceRepository();
+                          final items = await repo.getItemsByInvoice(
+                            invoice.id!,
+                          );
+                          if (!context.mounted) return;
+
+                          // Pindah ke halaman PDF dengan invoice + items
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder:
-                                  (_) => InvoicePreviewPage(invoice: invoice),
+                                  (_) => InvoicePdfPage(
+                                    invoice: invoice,
+                                    items: items,
+                                  ),
                             ),
                           );
                         },
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          await repo.deleteInvoice(invoice.id!);
-                          refresh();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                    ),
+                  );
+                },
+              ),
     );
   }
 }
