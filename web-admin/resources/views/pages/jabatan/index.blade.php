@@ -52,9 +52,11 @@
                             <td class="px-6 py-4 text-center space-x-2">
                                 <button onclick="openEditModal('jabatan', {{ $role->id }}, '{{ $role->jabatan }}')"
                                     class="text-yellow-500 hover:text-yellow-600 transition" title="Edit">✏️</button>
-                                <button type="button"
-                                    class="text-red-500 hover:text-red-600 transition delete-button"
-                                    data-type="jabatan" data-id="{{ $role->id }}" title="Hapus">🗑️</button>
+
+                                @if (!in_array($role->jabatan, ['Admin', 'Sales', 'Penanggung Jawab Alat', 'Operator Alat', 'Operator Maintenance']))
+                                    <button type="button" class="text-red-500 hover:text-red-600 transition delete-button"
+                                        data-type="jabatan" data-id="{{ $role->id }}" title="Hapus">🗑️</button>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -134,7 +136,7 @@
         }
 
         document.querySelectorAll('.delete-button').forEach(button => {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function() {
                 const id = this.dataset.id;
                 const type = this.dataset.type;
                 Swal.fire({

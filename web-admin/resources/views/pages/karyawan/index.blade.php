@@ -76,17 +76,20 @@
                                     {{ $karyawan->user->email ?? '-' }}
                                 </td>
                                 <td class="px-6 py-4 text-center space-x-2">
-                                    <a href="/karyawan/{{ $karyawan->id }}"
-                                        class="inline-flex items-center justify-center w-8 h-8 text-yellow-500 hover:text-yellow-600 transition"
-                                        title="Edit">
-                                        ✏️
-                                    </a>
-                                    <button type="button"
-                                        class="inline-flex items-center justify-center w-8 h-8 text-red-500 hover:text-red-600 transition delete-button"
-                                        data-id="{{ $karyawan->id }}" title="Hapus">
-                                        🗑️
-                                    </button>
-                                </td>
+    <a href="/karyawan/{{ $karyawan->id }}"
+        class="inline-flex items-center justify-center w-8 h-8 text-yellow-500 hover:text-yellow-600 transition"
+        title="Edit">
+        ✏️
+    </a>
+
+    @if ($karyawan->user->email !== 'admin@nsm.com')
+        <button type="button"
+            class="inline-flex items-center justify-center w-8 h-8 text-red-500 hover:text-red-600 transition delete-button"
+            data-id="{{ $karyawan->id }}" title="Hapus">
+            🗑️
+        </button>
+    @endif
+</td>
                             </tr>
                         @empty
                             <tr>
