@@ -5,68 +5,75 @@ import '../models/invoice_item.dart';
 class InvoiceRepository {
   final _dbHelper = DatabaseHelper.instance;
 
-  /// =============================
-  /// CREATE INVOICE + ITEMS
-  /// =============================
   Future<int> createInvoice(Invoice invoice, List<InvoiceItem> items) async {
     final db = await _dbHelper.database;
 
     return await db.transaction<int>((txn) async {
-      // Insert invoice
       final invoiceId = await txn.insert('invoices', invoice.toMap());
 
-      // Insert items
       for (final item in items) {
-        final data = item.toMap();
-        data['invoice_id'] = invoiceId;
-
-        await txn.insert('invoice_items', data);
+        await txn.insert('invoice_items', {
+          ...item.toMap(),
+          'invoice_id': invoiceId,
+        });
       }
 
       return invoiceId;
     });
   }
 
-  /// Ambil nomor urut terakhir nota di bulan tertentu
+  Future<void> updateInvoice(Invoice invoice, List<InvoiceItem> items) async {
+    if (invoice.id == null) {
+      throw ArgumentError('Invoice ID tidak boleh null saat update.');
+    }
+
+    final db = await _dbHelper.database;
+
+    await db.transaction((txn) async {
+      await txn.update(
+        'invoices',
+        invoice.toMap(),
+        where: 'id = ?',
+        whereArgs: [invoice.id],
+      );
+
+      await txn.delete(
+        'invoice_items',
+        where: 'invoice_id = ?',
+        whereArgs: [invoice.id!],
+      );
+
+      for (final item in items) {
+        await txn.insert('invoice_items', {
+          ...item.toMap(),
+          'invoice_id': invoice.id!,
+        });
+      }
+    });
+  }
+
   Future<int> getLastInvoiceNumberOfMonth(String year, String month) async {
     final db = await _dbHelper.database;
 
-    // Cari invoice bulan ini, urut dari nomor terbesar
     final result = await db.rawQuery(
       '''
-    SELECT invoice_number 
-    FROM invoices 
-    WHERE invoice_number LIKE ?
-    ORDER BY invoice_number DESC
-    LIMIT 1
-  ''',
+      SELECT invoice_number 
+      FROM invoices 
+      WHERE invoice_number LIKE ?
+      ORDER BY invoice_number DESC
+      LIMIT 1
+      ''',
       ['NSM-$year-$month-%'],
     );
 
     if (result.isEmpty) return 0;
 
-    final lastInvoiceNumber = result.first['invoice_number'] as String;
-
-    // Ambil 4 digit terakhir sebagai nomor urut
-    final lastNumberStr = lastInvoiceNumber.split('-').last;
+    final lastNumberStr =
+        (result.first['invoice_number'] as String).split('-').last;
     return int.tryParse(lastNumberStr) ?? 0;
   }
 
-  /// =============================
-  /// GET ALL INVOICES (UNTUK LIST)
-  /// =============================
-  Future<List<Invoice>> getAllInvoices() async {
-    final db = await _dbHelper.database;
-
-    final result = await db.query('invoices', orderBy: 'invoice_date DESC');
-
-    return result.map((e) => Invoice.fromMap(e)).toList();
-  }
-
-  /// =============================
-  /// GET INVOICES (PAGINATION READY)
-  /// =============================
-  Future<List<Invoice>> getInvoices({int limit = 20, int offset = 0}) async {
+  Future<List<Invoice>> getInvoices({int? limit, int offset = 0}) async {
     final db = await _dbHelper.database;
 
     final result = await db.query(
@@ -76,12 +83,9 @@ class InvoiceRepository {
       offset: offset,
     );
 
-    return result.map((e) => Invoice.fromMap(e)).toList();
+    return result.map((row) => Invoice.fromMap(row)).toList();
   }
 
-  /// =============================
-  /// GET SINGLE INVOICE
-  /// =============================
   Future<Invoice?> getInvoiceById(int id) async {
     final db = await _dbHelper.database;
 
@@ -96,9 +100,6 @@ class InvoiceRepository {
     return Invoice.fromMap(result.first);
   }
 
-  /// =============================
-  /// GET ITEMS BY INVOICE
-  /// =============================
   Future<List<InvoiceItem>> getItemsByInvoice(int invoiceId) async {
     final db = await _dbHelper.database;
 
@@ -106,26 +107,21 @@ class InvoiceRepository {
       'invoice_items',
       where: 'invoice_id = ?',
       whereArgs: [invoiceId],
+      orderBy: 'id ASC',
     );
 
-    return result.map((e) => InvoiceItem.fromMap(e)).toList();
+    return result.map((row) => InvoiceItem.fromMap(row)).toList();
   }
 
-  /// =============================
-  /// DELETE INVOICE + ITEMS
-  /// =============================
   Future<void> deleteInvoice(int invoiceId) async {
     final db = await _dbHelper.database;
 
     await db.transaction((txn) async {
-      // hapus item dulu
       await txn.delete(
         'invoice_items',
         where: 'invoice_id = ?',
         whereArgs: [invoiceId],
       );
-
-      // hapus invoice
       await txn.delete('invoices', where: 'id = ?', whereArgs: [invoiceId]);
     });
   }

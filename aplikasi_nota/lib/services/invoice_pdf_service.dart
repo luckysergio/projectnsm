@@ -31,9 +31,6 @@ class InvoicePdfService {
     final owner = company?.owner ?? '';
     final address = company?.address ?? '';
     final phone = company?.phone ?? '';
-    final email = company?.email ?? '';
-    final socialMedia = company?.socialMedia ?? '';
-    final website = company?.website ?? '';
     final bankAccount = company?.bankAccount ?? '';
 
     String formatRupiah(double value) {
@@ -104,69 +101,71 @@ class InvoicePdfService {
                     // HEADER
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          pw.CrossAxisAlignment.center, // ⬅️ penting
                       children: [
                         // LOGO (KIRI)
                         pw.Container(
-                          width: 80,
-                          height: 80,
+                          width: 150,
+                          height: 150,
+                          alignment: pw.Alignment.center,
                           child: pw.Image(logo),
                         ),
 
+                        // INFO PERUSAHAAN (TENGAH)
                         pw.Expanded(
-                          child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.center,
-                            children: [
-                              pw.Text(
-                                companyName,
-                                style: pw.TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: PdfColors.black,
-                                ),
-                              ),
-                              if (address.isNotEmpty)
+                          child: pw.Container(
+                            height: 150, // ⬅️ samakan tinggi dengan logo
+                            alignment: pw.Alignment.center,
+                            child: pw.Column(
+                              mainAxisAlignment: pw.MainAxisAlignment.center,
+                              crossAxisAlignment: pw.CrossAxisAlignment.center,
+                              children: [
                                 pw.Text(
-                                  address,
+                                  companyName,
+                                  style: pw.TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColors.black,
+                                  ),
                                   textAlign: pw.TextAlign.center,
                                 ),
-
-                              if (phone.isNotEmpty || email.isNotEmpty)
-                                pw.Text(
-                                  [
-                                    if (phone.isNotEmpty) phone,
-                                    if (email.isNotEmpty) email,
-                                  ].join(' | '),
-                                  textAlign: pw.TextAlign.center,
-                                  style: pw.TextStyle(fontSize: 10),
-                                ),
-
-                              if (socialMedia.isNotEmpty || website.isNotEmpty)
-                                pw.Text(
-                                  [
-                                    if (socialMedia.isNotEmpty) socialMedia,
-                                    if (website.isNotEmpty) website,
-                                  ].join(' | '),
-                                  textAlign: pw.TextAlign.center,
-                                  style: pw.TextStyle(fontSize: 10),
-                                ),
-
-                              if (bankAccount.isNotEmpty)
-                                pw.Text(
-                                  'Rekening: $bankAccount',
-                                  textAlign: pw.TextAlign.center,
-                                  style: pw.TextStyle(fontSize: 10),
-                                ),
-                            ],
+                                pw.SizedBox(height: 4),
+                                if (address.isNotEmpty)
+                                  pw.Text(
+                                    address,
+                                    style: pw.TextStyle(
+                                      fontSize: 12,
+                                      color: PdfColors.grey800,
+                                    ),
+                                    textAlign: pw.TextAlign.center,
+                                  ),
+                                if (phone.isNotEmpty)
+                                  pw.Padding(
+                                    padding: const pw.EdgeInsets.only(top: 4),
+                                    child: pw.Text(
+                                      phone,
+                                      style: pw.TextStyle(
+                                        fontSize: 12,
+                                        color: PdfColors.grey800,
+                                      ),
+                                      textAlign: pw.TextAlign.center,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
 
+                        // INVOICE (KANAN - TENGAH)
                         pw.Container(
-                          alignment: pw.Alignment.centerRight,
+                          width: 80,
+                          height: 150,
+                          alignment: pw.Alignment.center,
                           child: pw.Text(
                             'INVOICE',
                             style: pw.TextStyle(
-                              fontSize: 20,
+                              fontSize: 14,
                               fontWeight: pw.FontWeight.bold,
                               color: PdfColors.black,
                             ),
@@ -176,7 +175,7 @@ class InvoicePdfService {
                     ),
 
                     pw.Divider(
-                      height: 24,
+                      height: 8,
                       thickness: 1,
                       color: PdfColors.grey400,
                     ),
@@ -205,6 +204,8 @@ class InvoicePdfService {
                                     fontWeight: pw.FontWeight.bold,
                                   ),
                                 ),
+                                if ((invoice.customerLocation ?? '').isNotEmpty)
+                                  pw.Text(invoice.customerLocation!),
                                 if ((invoice.customerAddress ?? '').isNotEmpty)
                                   pw.Text(invoice.customerAddress!),
                               ],
@@ -225,10 +226,10 @@ class InvoicePdfService {
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.end,
                               children: [
-                                pw.Text(invoice.invoiceNumber),
                                 pw.Text(
                                   ' ${formatTanggal(invoice.invoiceDate)}',
                                 ),
+                                pw.Text(invoice.invoiceNumber),
                               ],
                             ),
                           ),
@@ -306,7 +307,7 @@ class InvoicePdfService {
                               pw.Text(
                                 terbilang(invoice.total.toInt()),
                                 style: pw.TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   fontStyle: pw.FontStyle.italic,
                                   color: PdfColors.grey700,
                                 ),
@@ -354,11 +355,11 @@ class InvoicePdfService {
                       child: pw.Center(
                         child: pw.Text(
                           bankAccount.isNotEmpty
-                              ? 'Pembayaran akan dicek dan dikatakan berhasil apabila sudah masuk ke ($bankAccount).'
+                              ? 'Pembayaran dapat dilakukan Tranfer Ke Bank BCA No Rekening $bankAccount'
                               : 'Pembayaran akan dicek dan dikatakan berhasil apabila sudah masuk ke rekening yang tertera pada company profile.',
                           style: pw.TextStyle(
                             fontSize: 10,
-                            color: PdfColors.grey800,
+                            color: PdfColors.black,
                           ),
                           textAlign: pw.TextAlign.center,
                         ),
@@ -369,41 +370,65 @@ class InvoicePdfService {
 
                     // FOOTER
                     pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.center,
-                          mainAxisSize: pw.MainAxisSize.min,
-                          children: [
-                            pw.Text(
-                              'Tangerang Selatan, ${formatTanggal(invoice.invoiceDate)}',
-                              style: pw.TextStyle(
-                                fontSize: 12,
-                                color: PdfColors.black,
+                        pw.Container(
+                          padding: pw.EdgeInsets.only(left: 28),
+                          height: 140,
+                          child: pw.Column(
+                            mainAxisAlignment: pw.MainAxisAlignment.center,
+                            crossAxisAlignment: pw.CrossAxisAlignment.center,
+                            children: [
+                              pw.BarcodeWidget(
+                                barcode: pw.Barcode.qrCode(),
+                                data:
+                                    'https://maps.app.goo.gl/LwQmA1JNhUUoqsUVA',
+                                width: 80,
+                                height: 80,
                               ),
-                            ),
-                            pw.SizedBox(height: 4),
-                            pw.Image(
-                              ttdImage,
-                              width: 200,
-                              height: 60,
-                              fit: pw.BoxFit.contain,
-                            ),
-                            pw.SizedBox(height: 4),
-                            pw.Container(
-                              width: 200,
-                              height: 1,
-                              color: PdfColors.black,
-                            ),
-                            pw.SizedBox(height: 4),
-                            pw.Text(
-                              owner.isNotEmpty ? owner : 'Nama Pemilik',
-                              style: pw.TextStyle(
-                                fontSize: 10,
-                                color: PdfColors.grey600,
+                              pw.SizedBox(height: 4),
+                              pw.Text(
+                                'LOKASI KANTOR',
+                                style: pw.TextStyle(
+                                  fontSize: 8,
+                                  color: PdfColors.grey700,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        ),
+                        pw.Container(
+                          padding: pw.EdgeInsets.only(right: 12),
+                          height: 140,
+                          child: pw.Column(
+                            mainAxisAlignment: pw.MainAxisAlignment.center,
+                            crossAxisAlignment: pw.CrossAxisAlignment.center,
+                            children: [
+                              pw.Text(
+                                'Tangerang Selatan, ${formatTanggal(invoice.invoiceDate)}',
+                                style: pw.TextStyle(
+                                  fontSize: 12,
+                                  color: PdfColors.black,
+                                ),
+                              ),
+                              pw.SizedBox(height: 6),
+                              pw.Image(
+                                ttdImage,
+                                width: 240,
+                                height: 90,
+                                fit: pw.BoxFit.contain,
+                              ),
+                              pw.SizedBox(height: 4),
+                              pw.Text(
+                                owner.isNotEmpty ? owner : 'Nama Pemilik',
+                                style: pw.TextStyle(
+                                  fontSize: 10,
+                                  color: PdfColors.black,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

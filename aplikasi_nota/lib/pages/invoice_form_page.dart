@@ -21,19 +21,23 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
 
   final customerNameCtrl = TextEditingController();
   final customerPhoneCtrl = TextEditingController();
+  final customerLocationCtrl = TextEditingController(); // <-- NEW
   final customerAddressCtrl = TextEditingController();
+
+  DateTime selectedDate = DateTime.now(); // <-- NEW
 
   final List<InvoiceItem> items = [];
   final List<TextEditingController> priceControllers = [];
 
   double get total => items.fold(0.0, (sum, item) => sum + item.subtotal);
 
-  final List<String> satuanOptions = ['pcs', 'm³', 'jam', 'liter', 'kg'];
+  final List<String> satuanOptions = ['pcs', 'm³', 'jam', 'unit'];
 
   @override
   void dispose() {
     customerNameCtrl.dispose();
     customerPhoneCtrl.dispose();
+    customerLocationCtrl.dispose(); // <-- NEW
     customerAddressCtrl.dispose();
     for (var ctrl in priceControllers) {
       ctrl.dispose();
@@ -87,20 +91,22 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     syncItemsFromControllers();
 
     final repo = InvoiceRepository();
-    final now = DateTime.now();
-    final year = now.year.toString();
-    final month = now.month.toString().padLeft(2, '0');
+    final year = selectedDate.year.toString();
+    final month = selectedDate.month.toString().padLeft(2, '0');
 
     final lastNumber = await repo.getLastInvoiceNumberOfMonth(year, month);
     final nextNumber = (lastNumber + 1).toString().padLeft(4, '0');
 
     final invoiceNumber = 'NSM-$year-$month-$nextNumber';
 
+    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
+
     return Invoice(
       invoiceNumber: invoiceNumber,
-      invoiceDate: now.toIso8601String().split('T').first,
+      invoiceDate: formattedDate,
       customerName: customerNameCtrl.text,
       customerPhone: customerPhoneCtrl.text,
+      customerLocation: customerLocationCtrl.text, // <-- NEW
       customerAddress: customerAddressCtrl.text,
       subtotal: total,
       total: total,
@@ -134,6 +140,20 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     );
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
   void _showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
@@ -159,15 +179,16 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
-            const Text(
-              'Pemesan',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
             const SizedBox(height: 16),
             ...[
               (customerNameCtrl, 'Nama Pemesan', TextInputType.text, true),
               (customerPhoneCtrl, 'No. Telepon', TextInputType.phone, false),
-              (customerAddressCtrl, 'Alamat', TextInputType.text, false),
+              (
+                customerLocationCtrl,
+                'Lokasi',
+                TextInputType.text,
+                false
+              ), // <-- NEW
             ].map((field) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 14),
@@ -190,21 +211,75 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                     filled: true,
                     fillColor: Colors.white,
                   ),
-                  validator:
-                      field.$4
-                          ? (v) =>
-                              v?.trim().isEmpty == true ? 'Wajib diisi' : null
-                          : null,
+                  validator: field.$4
+                      ? (v) => v?.trim().isEmpty == true ? 'Wajib diisi' : null
+                      : null,
                 ),
               );
             }),
-            const SizedBox(height: 24),
-            const Text(
-              'Item Nota',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            // Date Picker Field
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Tanggal Nota',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Colors.blueAccent,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      DateFormat('dd MMMM yyyy', 'id_ID').format(selectedDate),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_today,
+                          color: Colors.blueAccent),
+                      onPressed: () => _selectDate(context),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
-
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: TextFormField(
+                controller: customerAddressCtrl,
+                keyboardType: TextInputType.text,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Alamat',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Colors.blueAccent,
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                validator: (v) =>
+                    v?.trim().isEmpty == true ? 'Wajib diisi' : null,
+              ),
+            ),
+            const SizedBox(height: 24),
             if (items.isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -221,179 +296,167 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
               )
             else
               Column(
-                children:
-                    items.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      final priceCtrl = priceControllers[index];
+                children: items.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  final priceCtrl = priceControllers[index];
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextFormField(
-                                      initialValue: item.productName,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Nama item',
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.zero,
-                                      ),
-                                      onChanged: (v) {
-                                        item.productName = v;
-                                      },
-                                    ),
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: item.productName,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Nama item',
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
                                   ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => removeItem(index),
-                                  ),
-                                ],
+                                  onChanged: (v) {
+                                    item.productName = v;
+                                  },
+                                ),
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: TextFormField(
-                                      initialValue: item.qty.toString(),
-                                      decoration: InputDecoration(
-                                        labelText: 'Qty',
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      onChanged: (v) {
-                                        final qty = int.tryParse(v) ?? 0;
-                                        item.qty = qty;
-                                        final price = parsePrice(
-                                          priceCtrl.text,
-                                        );
-                                        item.subtotal = qty * price;
-                                        setState(() {});
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    flex: 2,
-                                    child: DropdownButtonFormField<String>(
-                                      value: item.unit,
-                                      decoration: InputDecoration(
-                                        labelText: 'Satuan',
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      items:
-                                          satuanOptions
-                                              .map(
-                                                (e) => DropdownMenuItem(
-                                                  value: e,
-                                                  child: Text(e),
-                                                ),
-                                              )
-                                              .toList(),
-                                      onChanged: (v) {
-                                        if (v != null) {
-                                          item.unit = v;
-                                          setState(() {});
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    flex: 3,
-                                    child: TextField(
-                                      controller: priceCtrl,
-                                      decoration: InputDecoration(
-                                        labelText: 'Harga',
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      onChanged: (rawInput) {
-                                        final price = parsePrice(rawInput);
-                                        item.price = price;
-                                        item.subtotal = item.qty * price;
-                                        setState(() {});
-                                      },
-                                      onTapOutside: (_) {
-                                        final raw = priceCtrl.text.replaceAll(
-                                          RegExp(r'[^\d]'),
-                                          '',
-                                        );
-                                        if (raw.isNotEmpty) {
-                                          final numValue =
-                                              int.tryParse(raw) ?? 0;
-                                          final formatted = NumberFormat(
-                                            '#,##0',
-                                            'id_ID',
-                                          ).format(numValue);
-                                          priceCtrl.value = TextEditingValue(
-                                            text: formatted,
-                                            selection: TextSelection.collapsed(
-                                              offset: formatted.length,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ],
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => removeItem(index),
                               ),
-                              const SizedBox(height: 10),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  formatRupiah(item.subtotal),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.blueAccent,
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  initialValue: item.qty.toString(),
+                                  decoration: InputDecoration(
+                                    labelText: 'Qty',
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                   ),
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                  onChanged: (v) {
+                                    final qty = int.tryParse(v) ?? 0;
+                                    item.qty = qty;
+                                    final price = parsePrice(priceCtrl.text);
+                                    item.subtotal = qty * price;
+                                    setState(() {});
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: DropdownButtonFormField<String>(
+                                  value: item.unit,
+                                  decoration: InputDecoration(
+                                    labelText: 'Satuan',
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  items: satuanOptions
+                                      .map(
+                                        (e) => DropdownMenuItem(
+                                          value: e,
+                                          child: Text(e),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      item.unit = v;
+                                      setState(() {});
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  controller: priceCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: 'Harga',
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                  onChanged: (rawInput) {
+                                    final price = parsePrice(rawInput);
+                                    item.price = price;
+                                    item.subtotal = item.qty * price;
+                                    setState(() {});
+                                  },
+                                  onTapOutside: (_) {
+                                    final raw = priceCtrl.text.replaceAll(
+                                      RegExp(r'[^\d]'),
+                                      '',
+                                    );
+                                    if (raw.isNotEmpty) {
+                                      final numValue = int.tryParse(raw) ?? 0;
+                                      final formatted = NumberFormat(
+                                        '#,##0',
+                                        'id_ID',
+                                      ).format(numValue);
+                                      priceCtrl.value = TextEditingValue(
+                                        text: formatted,
+                                        selection: TextSelection.collapsed(
+                                          offset: formatted.length,
+                                        ),
+                                      );
+                                    }
+                                  },
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      );
-                    }).toList(),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              formatRupiah(item.subtotal),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.blueAccent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
-
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
@@ -434,7 +497,6 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,

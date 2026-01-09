@@ -172,19 +172,6 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
               ),
-              _buildTextField(
-                label: 'Email',
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              _buildTextField(
-                label: 'Sosial Media',
-                controller: _socialMediaCtrl,
-              ),
-              _buildTextField(
-                label: 'Website / Link Company Profile',
-                controller: _websiteCtrl,
-              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

@@ -102,7 +102,6 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          // ================= SEARCH BAR (TIDAK SCROLL) =================
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(

@@ -33,17 +33,18 @@ class DatabaseHelper {
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE invoices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        invoice_number TEXT NOT NULL UNIQUE,
-        invoice_date TEXT NOT NULL,
-        customer_name TEXT NOT NULL,
-        customer_phone TEXT,
-        customer_address TEXT,
-        subtotal REAL NOT NULL,
-        total REAL NOT NULL,
-        notes TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_number TEXT NOT NULL UNIQUE,
+  invoice_date TEXT NOT NULL,
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT,
+  customer_location TEXT,
+  customer_address TEXT,
+  subtotal REAL NOT NULL,
+  total REAL NOT NULL,
+  notes TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
     ''');
 
     await db.execute('''

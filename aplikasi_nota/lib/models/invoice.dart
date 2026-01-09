@@ -5,6 +5,9 @@ class Invoice {
 
   final String customerName;
   final String? customerPhone;
+
+  final String? customerLocation;
+
   final String? customerAddress;
 
   final double subtotal;
@@ -17,6 +20,7 @@ class Invoice {
     required this.invoiceDate,
     required this.customerName,
     this.customerPhone,
+    this.customerLocation,
     this.customerAddress,
     required this.subtotal,
     required this.total,
@@ -30,6 +34,7 @@ class Invoice {
       'invoice_date': invoiceDate,
       'customer_name': customerName,
       'customer_phone': customerPhone,
+      'customer_location': customerLocation,
       'customer_address': customerAddress,
       'subtotal': subtotal,
       'total': total,
@@ -44,6 +49,7 @@ class Invoice {
       invoiceDate: map['invoice_date'],
       customerName: map['customer_name'],
       customerPhone: map['customer_phone'],
+      customerLocation: map['customer_location'],
       customerAddress: map['customer_address'],
       subtotal: (map['subtotal'] as num).toDouble(),
       total: (map['total'] as num).toDouble(),
