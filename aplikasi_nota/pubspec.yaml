@@ -25,7 +25,7 @@ dependencies:
   # ===============================
   # FORMAT TANGGAL & UANG
   # ===============================
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # ===============================
   # PDF INVOICE & PRINT
@@ -43,9 +43,18 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/images/wm.webp"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/images/wm.webp"
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/logo.jpeg
+    - assets/images/logo.webp
     - assets/images/wm.webp
+    - assets/images/ttdlama.webp
+    - assets/images/ttdbaru.webp

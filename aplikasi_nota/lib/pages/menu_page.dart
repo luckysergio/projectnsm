@@ -37,18 +37,17 @@ class MenuPage extends StatelessWidget {
                 );
               },
             ),
-            _MenuCard(
-              icon: Icons.print,
-              title: 'Cetak Nota',
-              onTap: () {
-                // Bisa langsung pilih nota terbaru atau tampilkan dialog pilih
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const InvoiceListPage()),
-                );
-              },
-            ),
 
+            // _MenuCard(
+            //   icon: Icons.print,
+            //   title: 'Cetak Nota',
+            //   onTap: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (_) => const InvoiceListPage()),
+            //     );
+            //   },
+            // ),
             _MenuCard(
               icon: Icons.business,
               title: 'Profil Perusahaan',
