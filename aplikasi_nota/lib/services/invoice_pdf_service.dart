@@ -188,12 +188,6 @@ class InvoicePdfService {
                           flex: 2,
                           child: pw.Container(
                             padding: const pw.EdgeInsets.all(10),
-                            decoration: pw.BoxDecoration(
-                              border: pw.Border.all(color: PdfColors.grey300),
-                              borderRadius: pw.BorderRadius.all(
-                                pw.Radius.circular(6),
-                              ),
-                            ),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
@@ -214,15 +208,9 @@ class InvoicePdfService {
                         ),
                         pw.SizedBox(width: 10),
                         pw.Expanded(
-                          flex: 1,
+                          flex: 2,
                           child: pw.Container(
                             padding: const pw.EdgeInsets.all(10),
-                            decoration: pw.BoxDecoration(
-                              border: pw.Border.all(color: PdfColors.grey300),
-                              borderRadius: pw.BorderRadius.all(
-                                pw.Radius.circular(6),
-                              ),
-                            ),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.end,
                               children: [
@@ -254,7 +242,7 @@ class InvoicePdfService {
                       cellStyle: pw.TextStyle(fontSize: 9),
                       headers: const [
                         'No',
-                        'Nama Item',
+                        'Nama Produk',
                         'Qty',
                         'Satuan',
                         'Harga',

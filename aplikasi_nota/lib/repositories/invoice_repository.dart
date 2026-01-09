@@ -57,19 +57,21 @@ class InvoiceRepository {
 
     final result = await db.rawQuery(
       '''
-      SELECT invoice_number 
-      FROM invoices 
-      WHERE invoice_number LIKE ?
-      ORDER BY invoice_number DESC
-      LIMIT 1
-      ''',
-      ['NSM-$year-$month-%'],
+    SELECT invoice_number
+    FROM invoices
+    WHERE invoice_number LIKE ?
+    ORDER BY invoice_number DESC
+    LIMIT 1
+    ''',
+      ['INV/NSM/$year/$month/%'],
     );
 
     if (result.isEmpty) return 0;
 
-    final lastNumberStr =
-        (result.first['invoice_number'] as String).split('-').last;
+    final lastInvoice = result.first['invoice_number'] as String;
+
+    final lastNumberStr = lastInvoice.split('/').last;
+
     return int.tryParse(lastNumberStr) ?? 0;
   }
 

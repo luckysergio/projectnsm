@@ -31,7 +31,14 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
 
   double get total => items.fold(0.0, (sum, item) => sum + item.subtotal);
 
-  final List<String> satuanOptions = ['pcs', 'm³', 'jam', 'unit'];
+  final List<String> satuanOptions = [
+    'pcs',
+    'm',
+    'm²',
+    'm³',
+    'unit',
+    'batang',
+  ];
 
   @override
   void dispose() {
@@ -91,13 +98,15 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     syncItemsFromControllers();
 
     final repo = InvoiceRepository();
+
     final year = selectedDate.year.toString();
     final month = selectedDate.month.toString().padLeft(2, '0');
 
     final lastNumber = await repo.getLastInvoiceNumberOfMonth(year, month);
+
     final nextNumber = (lastNumber + 1).toString().padLeft(4, '0');
 
-    final invoiceNumber = 'NSM-$year-$month-$nextNumber';
+    final invoiceNumber = 'INV/NSM/$year/$month/$nextNumber';
 
     final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
 
@@ -183,12 +192,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
             ...[
               (customerNameCtrl, 'Nama Pemesan', TextInputType.text, true),
               (customerPhoneCtrl, 'No. Telepon', TextInputType.phone, false),
-              (
-                customerLocationCtrl,
-                'Lokasi',
-                TextInputType.text,
-                false
-              ), // <-- NEW
+              (customerLocationCtrl, 'Proyek', TextInputType.text, false),
             ].map((field) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 14),
