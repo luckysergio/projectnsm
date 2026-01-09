@@ -83,11 +83,22 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     }
   }
 
-  Invoice _buildInvoice() {
+  Future<Invoice> _buildInvoice() async {
     syncItemsFromControllers();
+
+    final repo = InvoiceRepository();
+    final now = DateTime.now();
+    final year = now.year.toString();
+    final month = now.month.toString().padLeft(2, '0');
+
+    final lastNumber = await repo.getLastInvoiceNumberOfMonth(year, month);
+    final nextNumber = (lastNumber + 1).toString().padLeft(4, '0');
+
+    final invoiceNumber = 'NSM-$year-$month-$nextNumber';
+
     return Invoice(
-      invoiceNumber: DateTime.now().millisecondsSinceEpoch.toString(),
-      invoiceDate: DateTime.now().toIso8601String().split('T').first,
+      invoiceNumber: invoiceNumber,
+      invoiceDate: now.toIso8601String().split('T').first,
       customerName: customerNameCtrl.text,
       customerPhone: customerPhoneCtrl.text,
       customerAddress: customerAddressCtrl.text,
@@ -103,7 +114,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
       return;
     }
 
-    final invoice = _buildInvoice();
+    final invoice = await _buildInvoice();
     await InvoiceRepository().createInvoice(invoice, items);
 
     if (!mounted) return;
@@ -117,7 +128,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
       return;
     }
 
-    final invoice = _buildInvoice();
+    final invoice = await _buildInvoice();
     await Printing.layoutPdf(
       onLayout: (_) => InvoicePdfService.generate(invoice, items),
     );
@@ -392,7 +403,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                 border: Border.all(color: Colors.blueAccent.withAlpha(77)),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     'TOTAL',

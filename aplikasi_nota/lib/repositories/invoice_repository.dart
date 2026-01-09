@@ -27,6 +27,31 @@ class InvoiceRepository {
     });
   }
 
+  /// Ambil nomor urut terakhir nota di bulan tertentu
+  Future<int> getLastInvoiceNumberOfMonth(String year, String month) async {
+    final db = await _dbHelper.database;
+
+    // Cari invoice bulan ini, urut dari nomor terbesar
+    final result = await db.rawQuery(
+      '''
+    SELECT invoice_number 
+    FROM invoices 
+    WHERE invoice_number LIKE ?
+    ORDER BY invoice_number DESC
+    LIMIT 1
+  ''',
+      ['NSM-$year-$month-%'],
+    );
+
+    if (result.isEmpty) return 0;
+
+    final lastInvoiceNumber = result.first['invoice_number'] as String;
+
+    // Ambil 4 digit terakhir sebagai nomor urut
+    final lastNumberStr = lastInvoiceNumber.split('-').last;
+    return int.tryParse(lastNumberStr) ?? 0;
+  }
+
   /// =============================
   /// GET ALL INVOICES (UNTUK LIST)
   /// =============================
