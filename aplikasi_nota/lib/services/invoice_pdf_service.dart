@@ -15,7 +15,7 @@ class InvoicePdfService {
   ) async {
     final pdf = pw.Document();
 
-    final logoData = await rootBundle.load('assets/images/logo.webp');
+    final logoData = await rootBundle.load('assets/images/logobaru.webp');
     final logo = pw.MemoryImage(logoData.buffer.asUint8List());
 
     final wmData = await rootBundle.load('assets/images/wm.webp');
@@ -343,7 +343,7 @@ class InvoicePdfService {
                       child: pw.Center(
                         child: pw.Text(
                           bankAccount.isNotEmpty
-                              ? 'Pembayaran dapat dilakukan Tranfer Ke Bank No Rekening $bankAccount'
+                              ? 'Pembayaran dapat dilakukan Tranfer Ke Bank BCA No Rekening $bankAccount'
                               : 'Pembayaran akan dicek dan dikatakan berhasil apabila sudah masuk ke rekening yang tertera pada company profile.',
                           style: pw.TextStyle(
                             fontSize: 12,

@@ -32,19 +32,21 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    final profile = await _repo.getProfile();
+    final profile = await CompanyProfileRepository().getProfile();
+
     if (profile != null) {
-      setState(() {
-        _profile = profile;
-        _nameCtrl.text = profile.name;
-        _ownerCtrl.text = profile.owner;
-        _bankAccountCtrl.text = profile.bankAccount;
-        _addressCtrl.text = profile.address;
-        _phoneCtrl.text = profile.phone;
-        _emailCtrl.text = profile.email;
-        _socialMediaCtrl.text = profile.socialMedia;
-        _websiteCtrl.text = profile.website;
-      });
+      _nameCtrl.text = profile.name;
+      _ownerCtrl.text = profile.owner;
+      _bankAccountCtrl.text = profile.bankAccount;
+      _addressCtrl.text = profile.address;
+      _phoneCtrl.text = profile.phone;
+    } else {
+      _nameCtrl.text = 'Niaga Solusi Mandiri';
+      _ownerCtrl.text = 'ADE SE';
+      _bankAccountCtrl.text = '8990140074 a/n Ade';
+      _addressCtrl.text =
+          'Jl Masjid Ar Rahman cicentang RT 02 RW 01 No.84 Rawabuntu Serpong Tangerang Selatan';
+      _phoneCtrl.text = '02129179935 - 085881800604';
     }
   }
 
@@ -60,9 +62,6 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
       bankAccount: _bankAccountCtrl.text,
       address: _addressCtrl.text,
       phone: _phoneCtrl.text,
-      email: _emailCtrl.text,
-      socialMedia: _socialMediaCtrl.text,
-      website: _websiteCtrl.text,
     );
 
     try {
@@ -114,8 +113,7 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
         controller: controller,
         keyboardType: keyboardType,
         textInputAction: TextInputAction.next,
-        validator:
-            validator ??
+        validator: validator ??
             (v) {
               if (v == null || v.trim().isEmpty) return 'Wajib diisi';
               return null;
@@ -155,10 +153,6 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Informasi Perusahaan',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
               const SizedBox(height: 16),
               _buildTextField(label: 'Nama Perusahaan', controller: _nameCtrl),
               _buildTextField(label: 'Pemilik', controller: _ownerCtrl),
@@ -176,17 +170,16 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon:
-                      _isSaving
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                          : const Icon(Icons.save),
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.save),
                   label: Text(_isSaving ? 'Menyimpan...' : 'SIMPAN PROFIL'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),

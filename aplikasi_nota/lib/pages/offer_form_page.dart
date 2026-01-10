@@ -22,7 +22,8 @@ class _OfferFormPageState extends State<OfferFormPage> {
   final customerNameCtrl = TextEditingController();
   final subjectCtrl = TextEditingController();
   final projectCtrl = TextEditingController();
-  final salesCtrl = TextEditingController(); // ← TAMBAHKAN INI
+  final salesCtrl = TextEditingController();
+  final salesPhoneCtrl = TextEditingController(); // ← TAMBAHKAN INI
 
   DateTime selectedDate = DateTime.now();
 
@@ -45,7 +46,8 @@ class _OfferFormPageState extends State<OfferFormPage> {
     customerNameCtrl.dispose();
     subjectCtrl.dispose();
     projectCtrl.dispose();
-    salesCtrl.dispose(); // ← tambahkan ini
+    salesCtrl.dispose();
+    salesPhoneCtrl.dispose(); // ← tambahkan ini
     for (var ctrl in priceControllers) {
       ctrl.dispose();
     }
@@ -53,6 +55,7 @@ class _OfferFormPageState extends State<OfferFormPage> {
   }
 
   void addItem() {
+    if (items.length >= 5) return; // ← BATASI MAKSIMAL 5 ITEM
     setState(() {
       final newItem = OfferItem(
         productName: '',
@@ -89,7 +92,7 @@ class _OfferFormPageState extends State<OfferFormPage> {
     for (int i = 0; i < items.length; i++) {
       final rawText = priceControllers[i].text;
       final price = parsePrice(rawText);
-      final qty = items[i].qty; // ← GUNAKAN qty
+      final qty = items[i].qty;
       items[i].price = price;
       items[i].subtotal = qty * price;
     }
@@ -112,10 +115,11 @@ class _OfferFormPageState extends State<OfferFormPage> {
       subject: subjectCtrl.text,
       customerName: customerNameCtrl.text,
       project: projectCtrl.text,
-      sales: salesCtrl.text, // ← SIMPAN NILAI SALES
+      sales: salesCtrl.text,
+      salesPhone: salesPhoneCtrl.text,
       subtotal: total,
       total: total,
-      notes: null, // ← HAPUS karena tidak ada di DB
+      notes: null,
     );
   }
 
@@ -126,6 +130,10 @@ class _OfferFormPageState extends State<OfferFormPage> {
     }
     if (items.isEmpty) {
       _showMessage('Item penawaran belum ditambahkan');
+      return;
+    }
+    if (items.length > 5) {
+      _showMessage('Maksimal hanya 5 item produk');
       return;
     }
 
@@ -143,6 +151,10 @@ class _OfferFormPageState extends State<OfferFormPage> {
   Future<void> previewPdf() async {
     if (items.isEmpty) {
       _showMessage('Item penawaran kosong');
+      return;
+    }
+    if (items.length > 5) {
+      _showMessage('Maksimal hanya 5 item produk');
       return;
     }
 
@@ -185,11 +197,13 @@ class _OfferFormPageState extends State<OfferFormPage> {
         foregroundColor: Colors.black,
       ),
       backgroundColor: Colors.grey[50],
-      floatingActionButton: FloatingActionButton(
-        onPressed: addItem,
-        backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: items.length < 5 // ← NONAKTIFKAN JIKA SUDAH 5
+          ? FloatingActionButton(
+              onPressed: addItem,
+              backgroundColor: Colors.blueAccent,
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
       body: Form(
         key: _formKey,
         child: ListView(
@@ -285,6 +299,30 @@ class _OfferFormPageState extends State<OfferFormPage> {
               ),
             ),
 
+            // Sales Phone
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: TextFormField(
+                controller: salesPhoneCtrl,
+                decoration: InputDecoration(
+                  labelText: 'No. HP Sales',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide:
+                        const BorderSide(color: Colors.blueAccent, width: 2),
+                  ),
+                ),
+                keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (v) =>
+                    v?.trim().isEmpty == true ? 'Wajib diisi' : null,
+              ),
+            ),
+
             // Tanggal Penawaran
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -372,27 +410,14 @@ class _OfferFormPageState extends State<OfferFormPage> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          TextFormField(
-                            initialValue: item.quality ?? '',
-                            decoration: InputDecoration(
-                              labelText: 'Kualitas / Spesifikasi',
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                            onChanged: (v) => item.quality = v,
-                          ),
-                          const SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(
                                 flex: 2,
                                 child: TextFormField(
-                                  initialValue:
-                                      item.qty.toString(), // ← GUNAKAN qty
+                                  initialValue: item.qty.toString(),
                                   decoration: InputDecoration(
-                                    labelText: 'Qty', // ← GANTI LABEL
+                                    labelText: 'Qty',
                                     filled: true,
                                     fillColor: Colors.white,
                                     border: OutlineInputBorder(
@@ -454,8 +479,7 @@ class _OfferFormPageState extends State<OfferFormPage> {
                                   onChanged: (rawInput) {
                                     final price = parsePrice(rawInput);
                                     item.price = price;
-                                    item.subtotal =
-                                        item.qty * price; // ← GUNAKAN qty
+                                    item.subtotal = item.qty * price;
                                     setState(() {});
                                   },
                                   onTapOutside: (_) {
@@ -537,6 +561,17 @@ class _OfferFormPageState extends State<OfferFormPage> {
             ),
 
             const SizedBox(height: 24),
+
+            // Info batas item
+            if (items.length >= 5)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Maksimal 5 item telah tercapai',
+                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ),
 
             // Tombol Simpan
             SizedBox(

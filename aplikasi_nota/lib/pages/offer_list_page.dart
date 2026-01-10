@@ -150,33 +150,46 @@ class _OfferListPageState extends State<OfferListPage> {
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(' ${offer.subject}'),
-                                  Text(' ${offer.project}'),
-                                  Text(' ${offer.offerNumber}'),
-                                  Text(' ${formatTanggal(offer.offerDate)}'),
+                                  Text(offer.subject),
+                                  Text(offer.project),
+                                  Text(offer.offerNumber),
+                                  Text(formatTanggal(offer.offerDate)),
                                 ],
                               ),
                               trailing: IconButton(
                                 icon:
                                     const Icon(Icons.print, color: Colors.blue),
                                 onPressed: () async {
-                                  if (offer.id == null) return;
+                                  // Cek eksplisit untuk null
+                                  if (offer.id == null || offer.id == 0) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('ID penawaran tidak valid')),
+                                    );
+                                    return;
+                                  }
 
-                                  final repo = OfferRepository();
-                                  final items =
-                                      await repo.getItemsByOffer(offer.id!);
-                                  if (!context.mounted) return;
+                                  try {
+                                    final repo = OfferRepository();
+                                    final items =
+                                        await repo.getItemsByOffer(offer.id!);
+                                    if (!context.mounted) return;
 
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => OfferPdfPage(
-                                        offer: offer,
-                                        items: items,
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => OfferPdfPage(
+                                            offer: offer, items: items),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
                                 },
                               ),
                             ),

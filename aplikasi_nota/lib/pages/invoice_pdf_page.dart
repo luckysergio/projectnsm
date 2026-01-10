@@ -1,11 +1,8 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../models/invoice.dart';
 import '../models/invoice_item.dart';
@@ -38,35 +35,14 @@ class _InvoicePdfPageState extends State<InvoicePdfPage> {
   }
 
   Future<void> _sharePdf() async {
-    try {
-      final pdfBytes = await _pdfFuture;
+    final bytes = await _pdfFuture;
 
-      final safeName = widget.invoice.invoiceNumber.replaceAll('/', '_');
-      final fileName = '$safeName.pdf';
+    final safeName = widget.invoice.invoiceNumber.replaceAll('/', '_');
 
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(pdfBytes);
-
-      final xFile = XFile(
-        file.path,
-        mimeType: 'application/pdf',
-        name: fileName,
-      );
-
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [xFile],
-          subject: 'Nota ${widget.invoice.invoiceNumber}',
-          text: 'Terlampir nota ${widget.invoice.invoiceNumber}',
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal berbagi PDF: $e')),
-      );
-    }
+    await Printing.sharePdf(
+      bytes: bytes,
+      filename: '$safeName.pdf',
+    );
   }
 
   @override
@@ -78,15 +54,15 @@ class _InvoicePdfPageState extends State<InvoicePdfPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: _sharePdf,
             tooltip: 'Bagikan PDF',
+            onPressed: _sharePdf,
           ),
         ],
       ),
       body: PdfPreview(
         build: (format) => _pdfFuture,
         allowPrinting: true,
-        allowSharing: false,
+        allowSharing: false, // ⬅️ MATIKAN BAWAAN
         maxPageWidth: 700,
         initialPageFormat: PdfPageFormat.a4,
       ),

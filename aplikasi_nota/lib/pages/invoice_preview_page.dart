@@ -14,31 +14,29 @@ class InvoicePreviewPage extends StatelessWidget {
 
   const InvoicePreviewPage({super.key, required this.invoice});
 
-  // Fungsi bantu: buat PDF error sederhana
   Future<Uint8List> _generateErrorPdf(String message) async {
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
-        build:
-            (context) => pw.Center(
-              child: pw.Column(
-                children: [
-                  pw.Text(
-                    'Gagal Memuat Nota',
-                    style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.Text(
-                    message,
-                    style: pw.TextStyle(fontSize: 14, color: PdfColors.red),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ],
+        build: (context) => pw.Center(
+          child: pw.Column(
+            children: [
+              pw.Text(
+                'Gagal Memuat Nota',
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
-            ),
+              pw.SizedBox(height: 20),
+              pw.Text(
+                message,
+                style: pw.TextStyle(fontSize: 14, color: PdfColors.red),
+                textAlign: pw.TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
     return pdf.save();

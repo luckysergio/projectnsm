@@ -15,7 +15,7 @@ class OfferPdfService {
   ) async {
     final pdf = pw.Document();
 
-    final logoData = await rootBundle.load('assets/images/logo.webp');
+    final logoData = await rootBundle.load('assets/images/logobaru.webp');
     final logo = pw.MemoryImage(logoData.buffer.asUint8List());
 
     final wmData = await rootBundle.load('assets/images/wm.webp');
@@ -91,7 +91,7 @@ class OfferPdfService {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(18),
+        margin: const pw.EdgeInsets.all(16),
         build: (_) => [
           pw.Stack(
             children: [
@@ -229,10 +229,10 @@ class OfferPdfService {
                   pw.SizedBox(height: 10),
 
                   pw.Text(
-                    'Dengan hormat,\n\n'
+                    'Dengan hormat,\n'
                     'Bersama ini kami dari $companyName bermaksud mengajukan '
-                    'penawaran harga terkait pekerjaan yang sedang Bapak/Ibu rencanakan. '
-                    'Adapun rincian penawaran kami adalah sebagai berikut:',
+                    'penawaran harga untuk pekerjaan yang sedang Bapak/Ibu kerjakan. '
+                    'Berikut harga yang kami tawarkan:',
                     style: const pw.TextStyle(fontSize: 10),
                   ),
 
@@ -346,32 +346,29 @@ class OfferPdfService {
                         ),
                         pw.SizedBox(height: 6),
                         termItem(
-                            '1. Minimal terdapat pembayaran awal (cash atau transfer).'),
+                            '1. Pembayaran cash atau transfer sebelum pengecoran.'),
                         termItem(
-                            '2. Pembayaran transfer ditujukan ke rekening resmi perusahaan: '
+                            '2. Transfer pembayaran ke Bank BCA No Rekening : '
                             '${bankAccount.isNotEmpty ? bankAccount : 'belum tersedia'}.'),
                         termItem(
-                            '3. Penggunaan pipa lebih dari 10 batang dikenakan biaya tambahan Rp100.000 per batang.'),
+                            '3. Biaya koordinasi dengan petugas keamanan dan masyarakat setempat menjadi tanggung jawab pembeli.'),
                         termItem(
-                            '4. Biaya koordinasi dengan petugas keamanan dan masyarakat setempat menjadi tanggung jawab pembeli.'),
+                            '4. Pembeli bertanggung jawab atas kelayakan akses jalan yang dilalui kendaraan mixer/pompa.'),
+                        termItem('5. Pembongkaran maximal 2 jam'),
                         termItem(
-                            '5. Pembeli bertanggung jawab atas kelayakan akses jalan yang dilalui armada mixer/pompa.'),
-                        termItem(
-                            '6. Waktu pembongkaran lebih dari 1 jam dikenakan biaya tambahan Rp150.000 per jam.'),
-                        termItem(
-                            '7. Harga dapat berubah sewaktu-waktu apabila terjadi fluktuasi harga bahan baku, BBM, atau kebijakan moneter.'),
+                            '6. Harga belum termasik insentive crew/operator di lokasi proyek'),
                         pw.Divider(color: PdfColors.grey300),
                         pw.Text(
-                          'Demikian penawaran ini kami sampaikan. '
-                          'Untuk informasi lebih lanjut, silakan hubungi kami di '
-                          '${phone.isNotEmpty ? phone : 'nomor perusahaan'}.',
+                          'Demikian penawaran ini kami sampaikan '
+                          'Untuk informasi dan konsultasi lebih lanjut dapat menghubungi '
+                          '${offer.salesPhone.isNotEmpty ? offer.salesPhone : 'nomor sales'}.',
                           style: pw.TextStyle(fontSize: 9, height: 1.4),
                           textAlign: pw.TextAlign.justify,
                         ),
                         pw.SizedBox(height: 6),
                         pw.Text(
-                          'Besar harapan kami untuk dapat menjalin kerja sama yang baik. '
-                          'Atas perhatian dan kepercayaannya, kami ucapkan terima kasih.',
+                          'Besar harapan kami bisa bekerjasama untuk proyek yang sedang Bpk/Ibu kerjakan. '
+                          'Atas perhatiannya kami ucapkan terima kasih.',
                           style: pw.TextStyle(
                             fontSize: 9,
                             fontStyle: pw.FontStyle.italic,
