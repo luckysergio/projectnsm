@@ -21,8 +21,8 @@ class DatabaseHelper {
       path,
       version: 1,
       onCreate: _onCreate,
-      onConfigure: _onConfigure, // aktifkan foreign key
-      onUpgrade: _onUpgrade, // nanti untuk migrasi
+      onConfigure: _onConfigure,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -61,6 +61,36 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
+  CREATE TABLE offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    offer_number TEXT NOT NULL UNIQUE,
+    offer_date TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    customer_name TEXT NOT NULL,
+    project TEXT,
+    sales TEXT,
+    subtotal REAL NOT NULL,
+    total REAL NOT NULL,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+''');
+
+    await db.execute('''
+  CREATE TABLE offer_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    offer_id INTEGER NOT NULL,
+    product_name TEXT NOT NULL,
+    quality TEXT,
+    qty REAL NOT NULL DEFAULT 0,
+    unit TEXT NOT NULL,
+    price REAL NOT NULL DEFAULT 0,
+    subtotal REAL NOT NULL DEFAULT 0,
+    FOREIGN KEY(offer_id) REFERENCES offers(id) ON DELETE CASCADE
+  );
+''');
+
+    await db.execute('''
       CREATE TABLE company_profile (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -75,12 +105,8 @@ class DatabaseHelper {
     ''');
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Misal nanti ingin menambah kolom baru
-    // if (oldVersion < 2) { await db.execute('ALTER TABLE invoices ADD COLUMN discount REAL'); }
-  }
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {}
 
-  // Hapus semua tabel (debug/development)
   Future<void> deleteDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'nota.db');

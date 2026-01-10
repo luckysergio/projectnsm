@@ -343,10 +343,10 @@ class InvoicePdfService {
                       child: pw.Center(
                         child: pw.Text(
                           bankAccount.isNotEmpty
-                              ? 'Pembayaran dapat dilakukan Tranfer Ke Bank BCA No Rekening $bankAccount'
+                              ? 'Pembayaran dapat dilakukan Tranfer Ke Bank No Rekening $bankAccount'
                               : 'Pembayaran akan dicek dan dikatakan berhasil apabila sudah masuk ke rekening yang tertera pada company profile.',
                           style: pw.TextStyle(
-                            fontSize: 10,
+                            fontSize: 12,
                             color: PdfColors.black,
                           ),
                           textAlign: pw.TextAlign.center,
