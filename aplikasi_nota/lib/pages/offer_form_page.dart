@@ -23,7 +23,7 @@ class _OfferFormPageState extends State<OfferFormPage> {
   final subjectCtrl = TextEditingController();
   final projectCtrl = TextEditingController();
   final salesCtrl = TextEditingController();
-  final salesPhoneCtrl = TextEditingController(); // ← TAMBAHKAN INI
+  final salesPhoneCtrl = TextEditingController();
 
   DateTime selectedDate = DateTime.now();
 
@@ -47,7 +47,7 @@ class _OfferFormPageState extends State<OfferFormPage> {
     subjectCtrl.dispose();
     projectCtrl.dispose();
     salesCtrl.dispose();
-    salesPhoneCtrl.dispose(); // ← tambahkan ini
+    salesPhoneCtrl.dispose();
     for (var ctrl in priceControllers) {
       ctrl.dispose();
     }
@@ -55,11 +55,10 @@ class _OfferFormPageState extends State<OfferFormPage> {
   }
 
   void addItem() {
-    if (items.length >= 5) return; // ← BATASI MAKSIMAL 5 ITEM
+    if (items.length >= 5) return;
     setState(() {
       final newItem = OfferItem(
         productName: '',
-        quality: '',
         qty: 0,
         unit: 'pcs',
         price: 0,

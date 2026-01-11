@@ -57,32 +57,31 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
 
     final profile = CompanyProfile(
       id: _profile?.id,
-      name: _nameCtrl.text,
-      owner: _ownerCtrl.text,
-      bankAccount: _bankAccountCtrl.text,
-      address: _addressCtrl.text,
-      phone: _phoneCtrl.text,
+      name: _nameCtrl.text.trim(),
+      owner: _ownerCtrl.text.trim(),
+      bankAccount: _bankAccountCtrl.text.trim(),
+      address: _addressCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
     );
 
     try {
       if (_profile == null) {
-        await _repo.insertProfile(profile);
+        final newProfile = await _repo.insertProfile(profile);
+        _profile = newProfile;
       } else {
         await _repo.updateProfile(profile);
+        _profile = profile;
       }
 
-      // Refresh data
-      await _loadProfile();
-
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Data berhasil disimpan')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data berhasil disimpan')),
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menyimpan: $e')),
+      );
     } finally {
       setState(() => _isSaving = false);
     }

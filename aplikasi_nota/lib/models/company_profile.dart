@@ -5,9 +5,6 @@ class CompanyProfile {
   String bankAccount;
   String address;
   String phone;
-  String email;
-  String socialMedia;
-  String website;
 
   CompanyProfile({
     this.id,
@@ -16,9 +13,6 @@ class CompanyProfile {
     this.bankAccount = '',
     this.address = '',
     this.phone = '',
-    this.email = '',
-    this.socialMedia = '',
-    this.website = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -29,9 +23,6 @@ class CompanyProfile {
       'bank_account': bankAccount,
       'address': address,
       'phone': phone,
-      'email': email,
-      'social_media': socialMedia,
-      'website': website,
     };
   }
 
@@ -43,9 +34,6 @@ class CompanyProfile {
       bankAccount: map['bank_account'] as String? ?? '',
       address: map['address'] as String? ?? '',
       phone: map['phone'] as String? ?? '',
-      email: map['email'] as String? ?? '',
-      socialMedia: map['social_media'] as String? ?? '',
-      website: map['website'] as String? ?? '',
     );
   }
 }

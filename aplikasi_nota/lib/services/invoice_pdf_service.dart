@@ -179,7 +179,6 @@ class InvoicePdfService {
                       thickness: 1,
                       color: PdfColors.grey400,
                     ),
-                    pw.SizedBox(height: 16),
 
                     pw.Row(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -225,7 +224,7 @@ class InvoicePdfService {
                       ],
                     ),
 
-                    pw.SizedBox(height: 20),
+                    pw.SizedBox(height: 10),
 
                     pw.TableHelper.fromTextArray(
                       border: pw.TableBorder.all(
@@ -403,7 +402,7 @@ class InvoicePdfService {
                               pw.SizedBox(height: 6),
                               pw.Image(
                                 ttdImage,
-                                width: 240,
+                                width: 150,
                                 height: 90,
                                 fit: pw.BoxFit.contain,
                               ),

@@ -120,7 +120,6 @@ class OfferPdfService {
                         alignment: pw.Alignment.center,
                         child: pw.Image(logo),
                       ),
-
                       pw.Expanded(
                         child: pw.Container(
                           height: 150,
@@ -164,8 +163,6 @@ class OfferPdfService {
                           ),
                         ),
                       ),
-
-                      // INVOICE (KANAN - TENGAH)
                       pw.Container(
                         width: 80,
                         height: 150,
@@ -184,7 +181,6 @@ class OfferPdfService {
 
                   pw.Divider(
                       height: 12, thickness: 1, color: PdfColors.grey400),
-                  pw.SizedBox(height: 8),
 
                   pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -193,20 +189,42 @@ class OfferPdfService {
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text('Kepada Yth:',
-                                style: pw.TextStyle(
-                                    fontWeight: pw.FontWeight.bold)),
-                            pw.Text(offer.customerName),
+                            pw.Text(
+                              'Kepada Yth:',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 10, // ← ukuran font untuk label
+                              ),
+                            ),
+                            pw.Text(
+                              offer.customerName,
+                              style: pw.TextStyle(
+                                  fontSize: 10), // ← ukuran font untuk isi
+                            ),
                             pw.SizedBox(height: 4),
-                            pw.Text('Perihal:',
-                                style: pw.TextStyle(
-                                    fontWeight: pw.FontWeight.bold)),
-                            pw.Text(offer.subject),
+                            pw.Text(
+                              'Perihal:',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                            pw.Text(
+                              offer.subject,
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
                             pw.SizedBox(height: 4),
-                            pw.Text('Proyek:',
-                                style: pw.TextStyle(
-                                    fontWeight: pw.FontWeight.bold)),
-                            pw.Text(offer.project),
+                            pw.Text(
+                              'Proyek:',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                            pw.Text(
+                              offer.project,
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
                           ],
                         ),
                       ),
@@ -226,12 +244,12 @@ class OfferPdfService {
                     ],
                   ),
 
-                  pw.SizedBox(height: 10),
+                  pw.SizedBox(height: 8),
 
                   pw.Text(
                     'Dengan hormat,\n'
                     'Bersama ini kami dari $companyName bermaksud mengajukan '
-                    'penawaran harga untuk pekerjaan yang sedang Bapak/Ibu kerjakan. '
+                    'penawaran harga untuk pekerjaan yang sedang Bapak/Ibu kerjakan.\n'
                     'Berikut harga yang kami tawarkan:',
                     style: const pw.TextStyle(fontSize: 10),
                   ),

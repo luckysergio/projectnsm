@@ -21,10 +21,10 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
 
   final customerNameCtrl = TextEditingController();
   final customerPhoneCtrl = TextEditingController();
-  final customerLocationCtrl = TextEditingController(); // <-- NEW
+  final customerLocationCtrl = TextEditingController();
   final customerAddressCtrl = TextEditingController();
 
-  DateTime selectedDate = DateTime.now(); // <-- NEW
+  DateTime selectedDate = DateTime.now();
 
   final List<InvoiceItem> items = [];
   final List<TextEditingController> priceControllers = [];
@@ -44,7 +44,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
   void dispose() {
     customerNameCtrl.dispose();
     customerPhoneCtrl.dispose();
-    customerLocationCtrl.dispose(); // <-- NEW
+    customerLocationCtrl.dispose();
     customerAddressCtrl.dispose();
     for (var ctrl in priceControllers) {
       ctrl.dispose();
@@ -53,6 +53,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
   }
 
   void addItem() {
+    if (items.length >= 8) return;
     setState(() {
       final newItem = InvoiceItem(
         productName: '',
@@ -98,16 +99,11 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     syncItemsFromControllers();
 
     final repo = InvoiceRepository();
-
     final year = selectedDate.year.toString();
     final month = selectedDate.month.toString().padLeft(2, '0');
-
     final lastNumber = await repo.getLastInvoiceNumberOfMonth(year, month);
-
     final nextNumber = (lastNumber + 1).toString().padLeft(4, '0');
-
     final invoiceNumber = 'INV/NSM/$year/$month/$nextNumber';
-
     final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
 
     return Invoice(
@@ -115,7 +111,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
       invoiceDate: formattedDate,
       customerName: customerNameCtrl.text,
       customerPhone: customerPhoneCtrl.text,
-      customerLocation: customerLocationCtrl.text, // <-- NEW
+      customerLocation: customerLocationCtrl.text,
       customerAddress: customerAddressCtrl.text,
       subtotal: total,
       total: total,
@@ -178,11 +174,14 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
         foregroundColor: Colors.black,
       ),
       backgroundColor: Colors.grey[50],
-      floatingActionButton: FloatingActionButton(
-        onPressed: addItem,
-        backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      // ✅ SEMBUNYIKAN TOMBOL + SAAT SUDAH 8 ITEM
+      floatingActionButton: items.length < 8
+          ? FloatingActionButton(
+              onPressed: addItem,
+              backgroundColor: Colors.blueAccent,
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
       body: Form(
         key: _formKey,
         child: ListView(
@@ -502,6 +501,16 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
               ),
             ),
             const SizedBox(height: 24),
+            // ✅ PESAN INFORMASI BATAS ITEM
+            if (items.length >= 8)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Maksimal 8 item telah tercapai',
+                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(

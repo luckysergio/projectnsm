@@ -55,13 +55,14 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  image_path: "assets/images/wm.webp"
+  image_path: "assets/images/iconapps.png"
   adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/images/wm.webp"
+  adaptive_icon_foreground: "assets/images/iconapps.png"
 
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/iconapps.png
     - assets/images/logo.webp
     - assets/images/logobaru.webp
     - assets/images/wm.webp

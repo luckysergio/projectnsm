@@ -1,16 +1,20 @@
-import 'package:sqflite/sqflite.dart';
 import '../database/database_helper.dart';
 import '../models/company_profile.dart';
 
 class CompanyProfileRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
-  Future<int> insertProfile(CompanyProfile profile) async {
+  Future<CompanyProfile> insertProfile(CompanyProfile profile) async {
     final db = await _dbHelper.database;
-    return await db.insert(
-      'company_profile',
-      profile.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    final id = await db.insert('company_profile', profile.toMap());
+
+    return CompanyProfile(
+      id: id,
+      name: profile.name,
+      owner: profile.owner,
+      bankAccount: profile.bankAccount,
+      address: profile.address,
+      phone: profile.phone,
     );
   }
 
