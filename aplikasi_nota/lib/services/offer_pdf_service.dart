@@ -43,6 +43,27 @@ class OfferPdfService {
       return 'Rp ${buffer.toString()}';
     }
 
+    String formatQty(double value) {
+      // Jika qty adalah integer (tanpa desimal)
+      if (value % 1 == 0) {
+        return value.toInt().toString();
+      }
+      // Jika ada desimal, tampilkan maksimal 3 angka di belakang koma
+      // dan hilangkan trailing zeros
+      String formatted = value.toString();
+
+      // Hapus trailing zeros
+      if (formatted.contains('.')) {
+        formatted = formatted.replaceAll(RegExp(r'\.0+$'), '');
+        formatted = formatted.replaceAll(RegExp(r'(\.\d*?)0+$'), r'$1');
+      }
+
+      // Ganti titik dengan koma untuk format Indonesia
+      formatted = formatted.replaceAll('.', ',');
+
+      return formatted;
+    }
+
     String formatTanggal(String isoDate) {
       final months = [
         'Januari',
@@ -105,8 +126,6 @@ class OfferPdfService {
                   ),
                 ),
               ),
-
-              // KONTEN UTAMA
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
@@ -116,13 +135,11 @@ class OfferPdfService {
                     children: [
                       pw.Container(
                         width: 150,
-                        height: 150,
                         alignment: pw.Alignment.center,
                         child: pw.Image(logo),
                       ),
                       pw.Expanded(
                         child: pw.Container(
-                          height: 150,
                           alignment: pw.Alignment.center,
                           child: pw.Column(
                             mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -165,7 +182,6 @@ class OfferPdfService {
                       ),
                       pw.Container(
                         width: 80,
-                        height: 150,
                         alignment: pw.Alignment.center,
                         child: pw.Text(
                           '',
@@ -190,19 +206,6 @@ class OfferPdfService {
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
                             pw.Text(
-                              'Kepada Yth:',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 10, // ← ukuran font untuk label
-                              ),
-                            ),
-                            pw.Text(
-                              offer.customerName,
-                              style: pw.TextStyle(
-                                  fontSize: 10), // ← ukuran font untuk isi
-                            ),
-                            pw.SizedBox(height: 4),
-                            pw.Text(
                               'Perihal:',
                               style: pw.TextStyle(
                                 fontWeight: pw.FontWeight.bold,
@@ -211,6 +214,18 @@ class OfferPdfService {
                             ),
                             pw.Text(
                               offer.subject,
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
+                            pw.SizedBox(height: 4),
+                            pw.Text(
+                              'Kepada Yth:',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                            pw.Text(
+                              offer.customerName,
                               style: pw.TextStyle(fontSize: 10),
                             ),
                             pw.SizedBox(height: 4),
@@ -250,7 +265,7 @@ class OfferPdfService {
                     'Dengan hormat,\n'
                     'Bersama ini kami dari $companyName bermaksud mengajukan '
                     'penawaran harga untuk pekerjaan yang sedang Bapak/Ibu kerjakan.\n'
-                    'Berikut harga yang kami tawarkan:',
+                    'Harga yang kami tawarkan sebagai berikut :',
                     style: const pw.TextStyle(fontSize: 10),
                   ),
 
@@ -280,7 +295,7 @@ class OfferPdfService {
                       return [
                         '${i + 1}',
                         item.productName,
-                        item.qty.toString(),
+                        formatQty(item.qty), // Menggunakan formatQty yang baru
                         item.unit,
                         formatRupiah(item.price),
                         formatRupiah(item.subtotal),
@@ -344,7 +359,7 @@ class OfferPdfService {
                   pw.SizedBox(height: 12),
 
                   pw.Container(
-                    padding: const pw.EdgeInsets.all(14),
+                    padding: const pw.EdgeInsets.all(10),
                     decoration: pw.BoxDecoration(
                       color: PdfColors.grey50,
                       borderRadius: pw.BorderRadius.circular(8),
@@ -362,35 +377,35 @@ class OfferPdfService {
                             color: PdfColors.black,
                           ),
                         ),
-                        pw.SizedBox(height: 6),
+                        pw.SizedBox(height: 2),
                         termItem(
-                            '1. Pembayaran cash atau transfer sebelum pengecoran.'),
+                            '1. Pembayaran cash atau transfer sebelum pengecoran'),
                         termItem(
                             '2. Transfer pembayaran ke Bank BCA No Rekening : '
                             '${bankAccount.isNotEmpty ? bankAccount : 'belum tersedia'}.'),
                         termItem(
-                            '3. Biaya koordinasi dengan petugas keamanan dan masyarakat setempat menjadi tanggung jawab pembeli.'),
+                            '3. Biaya petugas keamanan dan izin lingkungan menjadi tanggung jawab pihak pembeli'),
                         termItem(
-                            '4. Pembeli bertanggung jawab atas kelayakan akses jalan yang dilalui kendaraan mixer/pompa.'),
-                        termItem('5. Pembongkaran maximal 2 jam'),
+                            '4. Pembeli bertanggungjawab atas kelayakan akses jalan yang akan dilalui kendaraan mixer/pompa'),
                         termItem(
-                            '6. Harga belum termasik insentive crew/operator di lokasi proyek'),
+                            '5. Pembongkaran Beton Readymix maximal 2 jam'),
+                        termItem(
+                            '6. Sewa pompa maximal 8 Jam/Time Site diatas 8 jam dikenakan biaya overtime'),
+                        termItem(
+                            '7. Harga belum termasuk insentive crew / operator di lokasi proyek'),
                         pw.Divider(color: PdfColors.grey300),
                         pw.Text(
                           'Demikian penawaran ini kami sampaikan '
-                          'Untuk informasi dan konsultasi lebih lanjut dapat menghubungi '
+                          'untuk informasi dan konsultasi lebih lanjut dapat menghubungi '
                           '${offer.salesPhone.isNotEmpty ? offer.salesPhone : 'nomor sales'}.',
                           style: pw.TextStyle(fontSize: 9, height: 1.4),
                           textAlign: pw.TextAlign.justify,
                         ),
-                        pw.SizedBox(height: 6),
                         pw.Text(
                           'Besar harapan kami bisa bekerjasama untuk proyek yang sedang Bpk/Ibu kerjakan. '
                           'Atas perhatiannya kami ucapkan terima kasih.',
                           style: pw.TextStyle(
                             fontSize: 9,
-                            fontStyle: pw.FontStyle.italic,
-                            color: PdfColors.grey700,
                             height: 1.4,
                           ),
                           textAlign: pw.TextAlign.justify,

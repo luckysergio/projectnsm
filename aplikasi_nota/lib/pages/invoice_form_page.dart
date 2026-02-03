@@ -27,12 +27,14 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
   DateTime selectedDate = DateTime.now();
 
   final List<InvoiceItem> items = [];
+  final List<TextEditingController> qtyControllers = [];
   final List<TextEditingController> priceControllers = [];
 
   double get total => items.fold(0.0, (sum, item) => sum + item.subtotal);
 
   final List<String> satuanOptions = [
     'pcs',
+    'jam',
     'm',
     'm²',
     'm³',
@@ -46,6 +48,9 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     customerPhoneCtrl.dispose();
     customerLocationCtrl.dispose();
     customerAddressCtrl.dispose();
+    for (var ctrl in qtyControllers) {
+      ctrl.dispose();
+    }
     for (var ctrl in priceControllers) {
       ctrl.dispose();
     }
@@ -57,12 +62,12 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     setState(() {
       final newItem = InvoiceItem(
         productName: '',
-        qty: 0,
+        qty: 0.0,
         unit: 'pcs',
-        price: 0,
-        subtotal: 0,
+        price: 0.0,
       );
       items.add(newItem);
+      qtyControllers.add(TextEditingController(text: ''));
       priceControllers.add(TextEditingController(text: ''));
     });
   }
@@ -70,34 +75,120 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
   void removeItem(int index) {
     setState(() {
       items.removeAt(index);
+      qtyControllers.removeAt(index);
       priceControllers.removeAt(index);
     });
   }
 
   String formatRupiah(double value) {
-    if (value == 0) return 'Rp 0';
     final formatter = NumberFormat('#,##0', 'id_ID');
     return 'Rp ${formatter.format(value)}';
   }
 
-  double parsePrice(String raw) {
-    final clean = raw.replaceAll(RegExp(r'[^\d]'), '');
-    return double.tryParse(clean) ?? 0;
+  // Parsing qty dengan support desimal
+  double parseQty(String raw) {
+    if (raw.isEmpty) return 0.0;
+
+    // Ganti koma dengan titik untuk parsing
+    String clean = raw.replaceAll(RegExp(r'[^\d,.]'), '');
+    clean = clean.replaceAll(',', '.');
+
+    // Hapus titik ganda
+    final parts = clean.split('.');
+    if (parts.length > 2) {
+      clean = '${parts[0]}.${parts.sublist(1).join()}';
+    }
+
+    return double.tryParse(clean) ?? 0.0;
   }
 
-  void syncItemsFromControllers() {
-    for (int i = 0; i < items.length; i++) {
-      final rawText = priceControllers[i].text;
-      final price = parsePrice(rawText);
-      final qty = items[i].qty;
-      items[i].price = price;
-      items[i].subtotal = qty * price;
+  // Parsing harga dari input yang diformat
+  double parsePrice(String raw) {
+    if (raw.isEmpty) return 0.0;
+
+    // Hapus semua karakter non-digit
+    String clean = raw.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Parse sebagai integer (rupiah biasanya tanpa desimal)
+    return double.tryParse(clean) ?? 0.0;
+  }
+
+  // Format harga untuk display dengan thousand separator
+  String formatPrice(double value) {
+    if (value == 0) return '';
+
+    // Format dengan thousand separator tanpa desimal
+    return NumberFormat('#,##0', 'id_ID').format(value.toInt());
+  }
+
+  // Format qty untuk display - tanpa trailing zeros untuk integer
+  String formatQty(double value) {
+    if (value == 0) return '';
+
+    // Jika qty adalah integer (tanpa desimal)
+    if (value % 1 == 0) {
+      return value.toInt().toString();
     }
+
+    // Jika ada desimal, format dengan maksimal 3 desimal
+    final formatter = NumberFormat('#,##0.###', 'id_ID');
+
+    // Hilangkan trailing zeros
+    String formatted = formatter.format(value);
+
+    // Jika ada desimal, hilangkan trailing zeros
+    if (formatted.contains(',')) {
+      final parts = formatted.split(',');
+      if (parts.length == 2) {
+        final decimal = parts[1].replaceAll(RegExp(r'0+$'), '');
+        if (decimal.isEmpty) {
+          return parts[0]; // Hanya bagian integer
+        }
+        return '${parts[0]},$decimal'; // Desimal tanpa trailing zeros
+      }
+    }
+    return formatted;
+  }
+
+  void updateItem(int index) {
+    final qty = parseQty(qtyControllers[index].text);
+    final price = parsePrice(priceControllers[index].text);
+
+    setState(() {
+      items[index] = items[index].copyWith(
+        qty: qty,
+        price: price,
+      );
+
+      // Update controllers untuk formatting
+      qtyControllers[index].text = formatQty(qty);
+      priceControllers[index].text = formatPrice(price);
+
+      // Update cursor position ke akhir text
+      qtyControllers[index].selection = TextSelection.fromPosition(
+          TextPosition(offset: qtyControllers[index].text.length));
+      priceControllers[index].selection = TextSelection.fromPosition(
+          TextPosition(offset: priceControllers[index].text.length));
+    });
+  }
+
+  void onQtyChanged(int index, String value) {
+    // Update nilai sementara
+    final qty = parseQty(value);
+    setState(() {
+      items[index] = items[index].copyWith(qty: qty);
+    });
+  }
+
+  void onPriceChanged(int index, String value) {
+    // Update nilai sementara
+    final price = parsePrice(value);
+    setState(() {
+      items[index] = items[index].copyWith(price: price);
+    });
   }
 
   Future<Invoice> _buildInvoice() async {
-    syncItemsFromControllers();
-
     final repo = InvoiceRepository();
     final year = selectedDate.year.toString();
     final month = selectedDate.month.toString().padLeft(2, '0');
@@ -125,6 +216,23 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
       return;
     }
 
+    // Validasi item
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (item.productName.trim().isEmpty) {
+        _showMessage('Nama item pada baris ${i + 1} belum diisi');
+        return;
+      }
+      if (item.qty <= 0) {
+        _showMessage('Qty pada baris ${i + 1} harus lebih dari 0');
+        return;
+      }
+      if (item.price <= 0) {
+        _showMessage('Harga pada baris ${i + 1} harus lebih dari 0');
+        return;
+      }
+    }
+
     final invoice = await _buildInvoice();
     await InvoiceRepository().createInvoice(invoice, items);
 
@@ -137,6 +245,15 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
     if (items.isEmpty) {
       _showMessage('Item nota kosong');
       return;
+    }
+
+    // Validasi sebelum preview
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (item.productName.trim().isEmpty || item.qty <= 0 || item.price <= 0) {
+        _showMessage('Lengkapi semua item terlebih dahulu');
+        return;
+      }
     }
 
     final invoice = await _buildInvoice();
@@ -174,7 +291,6 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
         foregroundColor: Colors.black,
       ),
       backgroundColor: Colors.grey[50],
-      // ✅ SEMBUNYIKAN TOMBOL + SAAT SUDAH 8 ITEM
       floatingActionButton: items.length < 8
           ? FloatingActionButton(
               onPressed: addItem,
@@ -302,6 +418,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                 children: items.asMap().entries.map((entry) {
                   final index = entry.key;
                   final item = entry.value;
+                  final qtyCtrl = qtyControllers[index];
                   final priceCtrl = priceControllers[index];
 
                   return Card(
@@ -326,7 +443,11 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                   onChanged: (v) {
-                                    item.productName = v;
+                                    setState(() {
+                                      items[index] = items[index].copyWith(
+                                        productName: v,
+                                      );
+                                    });
                                   },
                                 ),
                               ),
@@ -345,7 +466,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                               Expanded(
                                 flex: 2,
                                 child: TextFormField(
-                                  initialValue: item.qty.toString(),
+                                  controller: qtyCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Qty',
                                     filled: true,
@@ -354,16 +475,25 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
-                                  keyboardType: TextInputType.number,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: false,
+                                  ),
                                   inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
+                                    // Izinkan angka, koma, dan titik
+                                    FilteringTextInputFormatter.allow(
+                                      RegExp(r'[0-9,.]'),
+                                    ),
                                   ],
-                                  onChanged: (v) {
-                                    final qty = int.tryParse(v) ?? 0;
-                                    item.qty = qty;
-                                    final price = parsePrice(priceCtrl.text);
-                                    item.subtotal = qty * price;
-                                    setState(() {});
+                                  onChanged: (value) {
+                                    onQtyChanged(index, value);
+                                  },
+                                  onEditingComplete: () {
+                                    updateItem(index);
+                                  },
+                                  onTapOutside: (_) {
+                                    updateItem(index);
                                   },
                                 ),
                               ),
@@ -390,8 +520,11 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                                       .toList(),
                                   onChanged: (v) {
                                     if (v != null) {
-                                      item.unit = v;
-                                      setState(() {});
+                                      setState(() {
+                                        items[index] = items[index].copyWith(
+                                          unit: v,
+                                        );
+                                      });
                                     }
                                   },
                                 ),
@@ -399,7 +532,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                               const SizedBox(width: 10),
                               Expanded(
                                 flex: 3,
-                                child: TextField(
+                                child: TextFormField(
                                   controller: priceCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Harga',
@@ -413,46 +546,38 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
                                   ],
-                                  onChanged: (rawInput) {
-                                    final price = parsePrice(rawInput);
-                                    item.price = price;
-                                    item.subtotal = item.qty * price;
-                                    setState(() {});
+                                  onChanged: (value) {
+                                    onPriceChanged(index, value);
+                                  },
+                                  onEditingComplete: () {
+                                    updateItem(index);
                                   },
                                   onTapOutside: (_) {
-                                    final raw = priceCtrl.text.replaceAll(
-                                      RegExp(r'[^\d]'),
-                                      '',
-                                    );
-                                    if (raw.isNotEmpty) {
-                                      final numValue = int.tryParse(raw) ?? 0;
-                                      final formatted = NumberFormat(
-                                        '#,##0',
-                                        'id_ID',
-                                      ).format(numValue);
-                                      priceCtrl.value = TextEditingValue(
-                                        text: formatted,
-                                        selection: TextSelection.collapsed(
-                                          offset: formatted.length,
-                                        ),
-                                      );
-                                    }
+                                    updateItem(index);
                                   },
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              formatRupiah(item.subtotal),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.blueAccent,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Subtotal:',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                ),
                               ),
-                            ),
+                              Text(
+                                formatRupiah(item.subtotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.blueAccent,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

@@ -18,17 +18,18 @@ class CompanyProfileRepository {
     );
   }
 
-  Future<int> updateProfile(CompanyProfile profile) async {
+  Future<CompanyProfile> updateProfile(CompanyProfile profile) async {
     if (profile.id == null) {
       throw Exception('ID profile tidak boleh null saat update');
     }
     final db = await _dbHelper.database;
-    return await db.update(
+    await db.update(
       'company_profile',
       profile.toMap(),
       where: 'id = ?',
       whereArgs: [profile.id],
     );
+    return profile;
   }
 
   Future<CompanyProfile?> getProfile() async {

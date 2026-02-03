@@ -32,16 +32,17 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    final profile = await CompanyProfileRepository().getProfile();
+    final profile = await _repo.getProfile();
 
     if (profile != null) {
+      _profile = profile;
       _nameCtrl.text = profile.name;
       _ownerCtrl.text = profile.owner;
       _bankAccountCtrl.text = profile.bankAccount;
       _addressCtrl.text = profile.address;
       _phoneCtrl.text = profile.phone;
     } else {
-      _nameCtrl.text = 'Niaga Solusi Mandiri';
+      _nameCtrl.text = 'NIAGA SOLUSI MANDIRI';
       _ownerCtrl.text = 'ADE SE';
       _bankAccountCtrl.text = '8990140074 a/n Ade';
       _addressCtrl.text =
@@ -69,8 +70,8 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
         final newProfile = await _repo.insertProfile(profile);
         _profile = newProfile;
       } else {
-        await _repo.updateProfile(profile);
-        _profile = profile;
+        final updatedProfile = await _repo.updateProfile(profile);
+        _profile = updatedProfile;
       }
 
       if (!mounted) return;

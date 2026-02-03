@@ -44,6 +44,27 @@ class InvoicePdfService {
       return 'Rp ${buffer.toString()}';
     }
 
+    String formatQty(double value) {
+      // Jika qty adalah integer (tanpa desimal)
+      if (value % 1 == 0) {
+        return value.toInt().toString();
+      }
+      // Jika ada desimal, tampilkan maksimal 3 angka di belakang koma
+      // dan hilangkan trailing zeros
+      String formatted = value.toString();
+
+      // Hapus trailing zeros
+      if (formatted.contains('.')) {
+        formatted = formatted.replaceAll(RegExp(r'\.0+$'), '');
+        formatted = formatted.replaceAll(RegExp(r'(\.\d*?)0+$'), r'$1');
+      }
+
+      // Ganti titik dengan koma untuk format Indonesia
+      formatted = formatted.replaceAll('.', ',');
+
+      return formatted;
+    }
+
     String formatTanggal(String isoDate) {
       final months = [
         'Januari',
@@ -73,12 +94,11 @@ class InvoicePdfService {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(16),
         build: (context) {
           return [
             pw.Stack(
               children: [
-                // WATERMARK
                 pw.Positioned.fill(
                   child: pw.Align(
                     alignment: pw.Alignment.center,
@@ -93,29 +113,21 @@ class InvoicePdfService {
                     ),
                   ),
                 ),
-
-                // ISI DOKUMEN
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                   children: [
                     // HEADER
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment:
-                          pw.CrossAxisAlignment.center, // ⬅️ penting
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
-                        // LOGO (KIRI)
                         pw.Container(
                           width: 150,
-                          height: 150,
                           alignment: pw.Alignment.center,
                           child: pw.Image(logo),
                         ),
-
-                        // INFO PERUSAHAAN (TENGAH)
                         pw.Expanded(
                           child: pw.Container(
-                            height: 150, // ⬅️ samakan tinggi dengan logo
                             alignment: pw.Alignment.center,
                             child: pw.Column(
                               mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -156,11 +168,8 @@ class InvoicePdfService {
                             ),
                           ),
                         ),
-
-                        // INVOICE (KANAN - TENGAH)
                         pw.Container(
                           width: 80,
-                          height: 150,
                           alignment: pw.Alignment.center,
                           child: pw.Text(
                             'INVOICE',
@@ -175,7 +184,6 @@ class InvoicePdfService {
                     ),
 
                     pw.Divider(
-                      height: 8,
                       thickness: 1,
                       color: PdfColors.grey400,
                     ),
@@ -252,7 +260,8 @@ class InvoicePdfService {
                         return [
                           '${i + 1}',
                           item.productName,
-                          item.qty.toString(),
+                          formatQty(
+                              item.qty), // Menggunakan formatQty yang baru
                           item.unit,
                           formatRupiah(item.price),
                           formatRupiah(item.subtotal),
@@ -342,10 +351,10 @@ class InvoicePdfService {
                       child: pw.Center(
                         child: pw.Text(
                           bankAccount.isNotEmpty
-                              ? 'Pembayaran dapat dilakukan Tranfer Ke Bank BCA No Rekening $bankAccount'
+                              ? 'Pembayaran dapat dilakukan Transfer Ke Bank BCA No Rek $bankAccount'
                               : 'Pembayaran akan dicek dan dikatakan berhasil apabila sudah masuk ke rekening yang tertera pada company profile.',
                           style: pw.TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             color: PdfColors.black,
                           ),
                           textAlign: pw.TextAlign.center,
